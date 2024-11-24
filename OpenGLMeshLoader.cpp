@@ -1,9 +1,116 @@
+#include <iostream>
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
 //#include "Model_GLB.h"
 #include "GLTexture.h"
 #include <glut.h>
 #include "tiny_gltf.h"
+
+// Simple vertex shader
+const char* vertexShaderSource = R"(
+    #version 330 core
+    layout (location = 0) in vec3 aPos;
+    uniform mat4 model;
+    uniform mat4 view;
+    uniform mat4 projection;
+    void main()
+    {
+        gl_Position = projection * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);
+    }
+)";
+
+// Simple fragment shader
+const char* fragmentShaderSource = R"(
+    #version 330 core
+    out vec4 FragColor;
+    void main()
+    {
+        FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+    }
+)";
+
+GLuint compileShader(GLenum type, const char* source) {
+	GLuint shader = glCreateShader(type);
+	glShaderSource(shader, 1, &source, NULL);
+	glCompileShader(shader);
+	return shader;
+}
+
+class GLTFModel {
+public:
+	static bool LoadModel(const std::string& filename, tinygltf::Model& model) {
+		tinygltf::TinyGLTF loader;
+		std::string err;
+		std::string warn;
+
+		bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+
+		if (!warn.empty()) {
+			std::cout << "GLTF loading warning: " << warn << std::endl;
+		}
+
+		if (!err.empty()) {
+			std::cerr << "GLTF loading error: " << err << std::endl;
+		}
+
+		if (!ret) {
+			std::cerr << "Failed to load GLTF file: " << filename << std::endl;
+		}
+
+		return ret;
+	}
+
+	static void DrawModel(const tinygltf::Model& model) {
+		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
+		for (size_t i = 0; i < scene.nodes.size(); ++i) {
+			DrawNode(model, model.nodes[scene.nodes[i]]);
+		}
+	}
+
+private:
+	static void DrawNode(const tinygltf::Model& model, const tinygltf::Node& node) {
+		if (node.mesh >= 0) {
+			DrawMesh(model, model.meshes[node.mesh]);
+		}
+
+		for (size_t i = 0; i < node.children.size(); ++i) {
+			DrawNode(model, model.nodes[node.children[i]]);
+		}
+	}
+
+	static void DrawMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh) {
+		for (size_t i = 0; i < mesh.primitives.size(); ++i) {
+			const tinygltf::Primitive& primitive = mesh.primitives[i];
+
+			if (primitive.indices < 0) {
+				continue;
+			}
+
+			// Set up vertex attributes (position, normal, etc.)
+			// This is a simplified example. You'll need to set up your VAOs, VBOs, etc.
+			const tinygltf::Accessor& posAccessor = model.accessors[primitive.attributes.find("POSITION")->second];
+			const tinygltf::BufferView& posView = model.bufferViews[posAccessor.bufferView];
+			const tinygltf::Buffer& posBuffer = model.buffers[posView.buffer];
+
+			glBindBuffer(GL_ARRAY_BUFFER, 0);  // You should use your own VBO here
+			glVertexAttribPointer(0, posAccessor.type, posAccessor.componentType,
+				GL_FALSE, posAccessor.ByteStride(posView),
+				(void*)posAccessor.byteOffset);
+			glEnableVertexAttribArray(0);
+
+			// Draw the primitive
+			const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
+			const tinygltf::BufferView& indexView = model.bufferViews[indexAccessor.bufferView];
+			const tinygltf::Buffer& indexBuffer = model.buffers[indexView.buffer];
+
+			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);  // You should use your own IBO here
+			glDrawElements(primitive.mode, indexAccessor.count, indexAccessor.componentType,
+				(void*)indexAccessor.byteOffset);
+		}
+	}
+};
+
+
 
 
 int WIDTH = 1280;
@@ -341,8 +448,11 @@ void LoadAssets()
 	model_house.Load("Models/house/house.3DS");
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
-	//model_moscow.Load("Models/moscow/sports_car_racing_moscow.glb");
 
+
+	//if (!ret) {
+	//	std::cerr << "Error: " << err << std::endl;
+	//}
 
 
 	// Loading texture files
