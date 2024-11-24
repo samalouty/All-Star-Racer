@@ -58,36 +58,31 @@ private:
 	}
 
 	static void DrawMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh) {
-		for (size_t i = 0; i < mesh.primitives.size(); ++i) {
-			const tinygltf::Primitive& primitive = mesh.primitives[i];
+		for (const auto& primitive : mesh.primitives) {
+			if (primitive.indices < 0) continue;
 
-			if (primitive.indices < 0) {
-				continue;
+			const auto& positionAccessor = model.accessors[primitive.attributes.at("POSITION")];
+			const auto& positionView = model.bufferViews[positionAccessor.bufferView];
+			const auto& positionBuffer = model.buffers[positionView.buffer];
+
+			const float* positions = reinterpret_cast<const float*>(&positionBuffer.data[positionView.byteOffset]);
+
+			const auto& indexAccessor = model.accessors[primitive.indices];
+			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
+			const auto& indexBuffer = model.buffers[indexView.buffer];
+
+			const unsigned short* indices = reinterpret_cast<const unsigned short*>(&indexBuffer.data[indexView.byteOffset]);
+
+			glBegin(GL_TRIANGLES);  // Immediate mode for demonstration
+			for (size_t i = 0; i < indexAccessor.count; ++i) {
+				unsigned int index = indices[i];
+				glVertex3fv(&positions[index * 3]);
 			}
-
-			// Set up vertex attributes (position, normal, etc.)
-			// This is a simplified example. You'll need to set up your VAOs, VBOs, etc.
-			const tinygltf::Accessor& posAccessor = model.accessors[primitive.attributes.find("POSITION")->second];
-			const tinygltf::BufferView& posView = model.bufferViews[posAccessor.bufferView];
-			const tinygltf::Buffer& posBuffer = model.buffers[posView.buffer];
-
-			glBindBuffer(GL_ARRAY_BUFFER, 0);  // You should use your own VBO here
-			glVertexAttribPointer(0, posAccessor.type, posAccessor.componentType,
-				GL_FALSE, posAccessor.ByteStride(posView),
-				(void*)posAccessor.byteOffset);
-			glEnableVertexAttribArray(0);
-
-			// Draw the primitive
-			const tinygltf::Accessor& indexAccessor = model.accessors[primitive.indices];
-			const tinygltf::BufferView& indexView = model.bufferViews[indexAccessor.bufferView];
-			const tinygltf::Buffer& indexBuffer = model.buffers[indexView.buffer];
-
-			glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);  // You should use your own IBO here
-			glDrawElements(primitive.mode, indexAccessor.count, indexAccessor.componentType,
-				(void*)indexAccessor.byteOffset);
+			glEnd();
 		}
 	}
 };
+
 
 
 
@@ -289,12 +284,12 @@ void myDisplay(void)
 	//glPopMatrix();
 
 	//trynna draw a bugatti
-	glPushMatrix();
-	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(0.3, 0.3, 0.3);  // Scale if needed
-	glRotatef(90, 1, 0, 0);  // Rotate if needed
-	model_bugatti.Draw();
-	glPopMatrix();
+	//glPushMatrix();
+	//glTranslatef(0, 0, 0);  // Position your model
+	//glScalef(0.3, 0.3, 0.3);  // Scale if needed
+	//glRotatef(90, 1, 0, 0);  // Rotate if needed
+	//model_bugatti.Draw();
+	//glPopMatrix();
 
 	//glPushMatrix();
 	//glTranslatef(0, 0, 0);  // Position your model
@@ -304,7 +299,14 @@ void myDisplay(void)
 	//glPopMatrix();
 
 	// use tinygltf to draw gltf model
+
+	glPushMatrix();
+	glTranslatef(0, 0, 0);  // Position your model
+	glScalef(1, 1, 1);  // Scale if needed
+	glRotatef(90, 1, 0, 0);  // Rotate if needed
 	GLTFModel::DrawModel(gltfModel);
+	glPopMatrix();
+
 
 
 	//sky box
