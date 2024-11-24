@@ -1,3 +1,6 @@
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
 #include <iostream>
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
@@ -6,35 +9,11 @@
 #include <glut.h>
 #include "tiny_gltf.h"
 
-// Simple vertex shader
-const char* vertexShaderSource = R"(
-    #version 330 core
-    layout (location = 0) in vec3 aPos;
-    uniform mat4 model;
-    uniform mat4 view;
-    uniform mat4 projection;
-    void main()
-    {
-        gl_Position = projection * view * model * vec4(aPos.x, aPos.y, aPos.z, 1.0);
-    }
-)";
+GLuint shaderProgram;
 
-// Simple fragment shader
-const char* fragmentShaderSource = R"(
-    #version 330 core
-    out vec4 FragColor;
-    void main()
-    {
-        FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
-    }
-)";
+tinygltf::Model gltfModel;
+bool modelLoaded = false;
 
-GLuint compileShader(GLenum type, const char* source) {
-	GLuint shader = glCreateShader(type);
-	glShaderSource(shader, 1, &source, NULL);
-	glCompileShader(shader);
-	return shader;
-}
 
 class GLTFModel {
 public:
@@ -324,6 +303,8 @@ void myDisplay(void)
 	//model_moscow.Draw();
 	//glPopMatrix();
 
+	// use tinygltf to draw gltf model
+	GLTFModel::DrawModel(gltfModel);
 
 
 	//sky box
@@ -449,11 +430,8 @@ void LoadAssets()
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
-
-	//if (!ret) {
-	//	std::cerr << "Error: " << err << std::endl;
-	//}
-
+	// using tinygltf load gltf model
+	GLTFModel::LoadModel("Models/test/scene.gltf", gltfModel);
 
 	// Loading texture files
 	tex_ground.Load("Textures/ground.bmp");
@@ -498,3 +476,4 @@ void main(int argc, char** argv)
 
 	glutMainLoop();
 }
+
