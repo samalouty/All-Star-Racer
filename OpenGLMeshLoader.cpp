@@ -8,6 +8,8 @@
 #include "GLTexture.h"
 #include <glut.h>
 #include "tiny_gltf.h"
+#include <glew.h>
+
 
 GLuint shaderProgram;
 
@@ -39,44 +41,117 @@ public:
 		return ret;
 	}
 
-	static void DrawModel(const tinygltf::Model& model) {
+	static void DrawModel(const tinygltf::Model& model, const std::string& modelPath) {
 		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
 		for (size_t i = 0; i < scene.nodes.size(); ++i) {
-			DrawNode(model, model.nodes[scene.nodes[i]]);
+			DrawNode(model, model.nodes[scene.nodes[i]], modelPath);
 		}
 	}
 
 private:
-	static void DrawNode(const tinygltf::Model& model, const tinygltf::Node& node) {
+	static void DrawNode(const tinygltf::Model& model, const tinygltf::Node& node, const std::string& modelPath) {
 		if (node.mesh >= 0) {
-			DrawMesh(model, model.meshes[node.mesh]);
+			DrawMesh(model, model.meshes[node.mesh], modelPath);
 		}
 
 		for (size_t i = 0; i < node.children.size(); ++i) {
-			DrawNode(model, model.nodes[node.children[i]]);
+			DrawNode(model, model.nodes[node.children[i]], modelPath);
 		}
 	}
 
-	static void DrawMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh) {
+
+	static GLuint LoadTexture(const std::string& modelPath, const std::string& textureName) {
+		std::string directory = modelPath.substr(0, modelPath.find_last_of("/\\"));
+		std::string texturePath = directory + "/" + textureName;
+
+		GLuint textureID = 0;
+		glGenTextures(1, &textureID);
+		if (textureID == 0) {
+			std::cerr << "Failed to generate texture ID" << std::endl;
+			return 0;
+		}
+
+		glBindTexture(GL_TEXTURE_2D, textureID);
+
+		// Set texture wrapping parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+
+		// Set texture filtering parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		int width, height, nrChannels;
+		unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
+		if (data) {
+			GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
+			glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+
+			// Check if glGenerateMipmap is available
+			if (GLEW_VERSION_3_0 || GLEW_ARB_framebuffer_object) {
+				glGenerateMipmap(GL_TEXTURE_2D);
+			}
+			else {
+				std::cout << "glGenerateMipmap is not available. Falling back to gluBuild2DMipmaps." << std::endl;
+				gluBuild2DMipmaps(GL_TEXTURE_2D, format, width, height, format, GL_UNSIGNED_BYTE, data);
+			}
+
+			std::cout << "Loaded texture: " << texturePath << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
+		}
+		else {
+			std::cerr << "Failed to load texture: " << texturePath << std::endl;
+			glDeleteTextures(1, &textureID);
+			return 0;
+		}
+
+		stbi_image_free(data);
+		return textureID;
+	}
+
+
+
+	static void DrawMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const std::string& modelPath) {
 		for (const auto& primitive : mesh.primitives) {
 			if (primitive.indices < 0) continue;
 
+			// Load position data
 			const auto& positionAccessor = model.accessors[primitive.attributes.at("POSITION")];
 			const auto& positionView = model.bufferViews[positionAccessor.bufferView];
 			const auto& positionBuffer = model.buffers[positionView.buffer];
-
 			const float* positions = reinterpret_cast<const float*>(&positionBuffer.data[positionView.byteOffset]);
 
+			// Load texture coordinates
+			const auto& texcoordAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
+			const auto& texcoordView = model.bufferViews[texcoordAccessor.bufferView];
+			const auto& texcoordBuffer = model.buffers[texcoordView.buffer];
+			const float* texcoords = reinterpret_cast<const float*>(&texcoordBuffer.data[texcoordView.byteOffset]);
+
+			// Load indices
 			const auto& indexAccessor = model.accessors[primitive.indices];
 			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
 			const auto& indexBuffer = model.buffers[indexView.buffer];
-
 			const unsigned short* indices = reinterpret_cast<const unsigned short*>(&indexBuffer.data[indexView.byteOffset]);
 
-			glBegin(GL_TRIANGLES);  // Immediate mode for demonstration
+			// Load texture if available
+			if (primitive.material >= 0) {
+				const auto& material = model.materials[primitive.material];
+				if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+					int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+					const auto& texture = model.textures[textureIndex];
+					const auto& image = model.images[texture.source];
+
+					GLuint texID = LoadTexture(modelPath, image.uri);
+					glBindTexture(GL_TEXTURE_2D, texID);
+					glEnable(GL_TEXTURE_2D);
+				}
+			}
+
+			// Draw the mesh
+			glBegin(GL_TRIANGLES);
 			for (size_t i = 0; i < indexAccessor.count; ++i) {
 				unsigned int index = indices[i];
-				glVertex3fv(&positions[index * 3]);
+				glTexCoord2fv(&texcoords[index * 2]); // Apply texture coordinates
+				glVertex3fv(&positions[index * 3]);   // Apply vertex positions
 			}
 			glEnd();
 		}
@@ -302,9 +377,9 @@ void myDisplay(void)
 
 	glPushMatrix();
 	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(1, 1, 1);  // Scale if needed
-	glRotatef(90, 1, 0, 0);  // Rotate if needed
-	GLTFModel::DrawModel(gltfModel);
+	glScalef(0.01, 0.01, 0.01);  // Scale if needed
+	glRotatef(0, 1, 0, 0);  // Rotate if needed
+	GLTFModel::DrawModel(gltfModel, "models/test/");
 	glPopMatrix();
 
 
