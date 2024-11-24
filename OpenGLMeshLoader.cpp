@@ -1,7 +1,10 @@
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
+//#include "Model_GLB.h"
 #include "GLTexture.h"
 #include <glut.h>
+#include "tiny_gltf.h"
+
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -43,6 +46,8 @@ int cameraZoom = 0;
 Model_3DS model_house;
 Model_3DS model_tree;
 Model_3DS model_bugatti;
+//Model_GLB model_moscow;
+
 
 // Textures
 GLTexture tex_ground;
@@ -205,6 +210,14 @@ void myDisplay(void)
 	model_bugatti.Draw();
 	glPopMatrix();
 
+	//glPushMatrix();
+	//glTranslatef(0, 0, 0);  // Position your model
+	//glScalef(1.0, 1.0, 1.0);  // Scale if needed
+	//glRotatef(0, 1, 0, 0);  // Rotate if needed
+	//model_moscow.Draw();
+	//glPopMatrix();
+
+
 
 	//sky box
 	glPushMatrix();
@@ -328,6 +341,8 @@ void LoadAssets()
 	model_house.Load("Models/house/house.3DS");
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
+	//model_moscow.Load("Models/moscow/sports_car_racing_moscow.glb");
+
 
 
 	// Loading texture files
