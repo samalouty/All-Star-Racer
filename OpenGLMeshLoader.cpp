@@ -9,6 +9,11 @@
 #include <glut.h>
 #include "tiny_gltf.h"
 #include <glew.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <unordered_map>
+#include <vector>
 
 
 GLuint shaderProgram;
@@ -38,27 +43,124 @@ public:
 			std::cerr << "Failed to load GLTF file: " << filename << std::endl;
 		}
 
+		if (!GLEW_ARB_vertex_array_object && !GLEW_VERSION_3_0) {
+			std::cerr << "VAOs are not supported on your platform!" << std::endl;
+			return false;
+		}
+
 		return ret;
 	}
 
 	static void DrawModel(const tinygltf::Model& model, const std::string& modelPath) {
-		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
-		for (size_t i = 0; i < scene.nodes.size(); ++i) {
-			DrawNode(model, model.nodes[scene.nodes[i]], modelPath);
+		// Pre-process and cache data
+		static std::unordered_map<const tinygltf::Model*, ModelData> modelCache;
+		if (modelCache.find(&model) == modelCache.end()) {
+			modelCache[&model] = PreprocessModel(model, modelPath);
 		}
+		const ModelData& modelData = modelCache[&model];
+
+		// Draw all meshes
+		for (const auto& meshData : modelData.meshes) {
+			// Bind texture
+			glBindTexture(GL_TEXTURE_2D, meshData.textureID);
+
+			// Enable client-side capabilities
+			glEnableClientState(GL_VERTEX_ARRAY);
+			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
+
+			// Set up vertex and texture coordinate pointers
+			glVertexPointer(3, GL_FLOAT, 5 * sizeof(float), meshData.vertexData.data());
+			glTexCoordPointer(2, GL_FLOAT, 5 * sizeof(float), meshData.vertexData.data() + 3);
+
+			// Draw
+			glDrawArrays(GL_TRIANGLES, 0, meshData.vertexCount);
+
+			// Disable client-side capabilities
+			glDisableClientState(GL_VERTEX_ARRAY);
+			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		}
+
+		// Unbind texture
+		glBindTexture(GL_TEXTURE_2D, 0);
 	}
 
 private:
-	static void DrawNode(const tinygltf::Model& model, const tinygltf::Node& node, const std::string& modelPath) {
+	struct MeshData {
+		std::vector<float> vertexData;  // Interleaved: x, y, z, u, v
+		int vertexCount;
+		GLuint textureID;
+	};
+
+	struct ModelData {
+		std::vector<MeshData> meshes;
+	};
+
+	static ModelData PreprocessModel(const tinygltf::Model& model, const std::string& modelPath) {
+		ModelData modelData;
+		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
+		for (size_t i = 0; i < scene.nodes.size(); ++i) {
+			ProcessNode(model, model.nodes[scene.nodes[i]], modelPath, modelData);
+		}
+		return modelData;
+	}
+
+	static void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, const std::string& modelPath, ModelData& modelData) {
 		if (node.mesh >= 0) {
-			DrawMesh(model, model.meshes[node.mesh], modelPath);
+			ProcessMesh(model, model.meshes[node.mesh], modelPath, modelData);
 		}
 
 		for (size_t i = 0; i < node.children.size(); ++i) {
-			DrawNode(model, model.nodes[node.children[i]], modelPath);
+			ProcessNode(model, model.nodes[node.children[i]], modelPath, modelData);
 		}
 	}
 
+	static void ProcessMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const std::string& modelPath, ModelData& modelData) {
+		for (const auto& primitive : mesh.primitives) {
+			if (primitive.indices < 0) continue;
+
+			MeshData meshData;
+
+			// Process vertex data
+			const auto& positionAccessor = model.accessors[primitive.attributes.at("POSITION")];
+			const auto& positionView = model.bufferViews[positionAccessor.bufferView];
+			const auto& positionBuffer = model.buffers[positionView.buffer];
+			const float* positions = reinterpret_cast<const float*>(&positionBuffer.data[positionView.byteOffset]);
+
+			const auto& texcoordAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
+			const auto& texcoordView = model.bufferViews[texcoordAccessor.bufferView];
+			const auto& texcoordBuffer = model.buffers[texcoordView.buffer];
+			const float* texcoords = reinterpret_cast<const float*>(&texcoordBuffer.data[texcoordView.byteOffset]);
+
+			const auto& indexAccessor = model.accessors[primitive.indices];
+			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
+			const auto& indexBuffer = model.buffers[indexView.buffer];
+			const unsigned short* indices = reinterpret_cast<const unsigned short*>(&indexBuffer.data[indexView.byteOffset]);
+
+			// Interleave vertex data
+			for (size_t i = 0; i < indexAccessor.count; ++i) {
+				unsigned int index = indices[i];
+				meshData.vertexData.push_back(positions[index * 3]);
+				meshData.vertexData.push_back(positions[index * 3 + 1]);
+				meshData.vertexData.push_back(positions[index * 3 + 2]);
+				meshData.vertexData.push_back(texcoords[index * 2]);
+				meshData.vertexData.push_back(texcoords[index * 2 + 1]);
+			}
+			meshData.vertexCount = indexAccessor.count;
+
+			// Load texture
+			if (primitive.material >= 0) {
+				const auto& material = model.materials[primitive.material];
+				if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+					int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
+					const auto& texture = model.textures[textureIndex];
+					const auto& image = model.images[texture.source];
+					meshData.textureID = LoadTexture(modelPath, image.uri);
+				}
+			}
+
+			modelData.meshes.push_back(meshData);
+		}
+	}
 
 	static GLuint LoadTexture(const std::string& modelPath, const std::string& textureName) {
 		std::string directory = modelPath.substr(0, modelPath.find_last_of("/\\"));
@@ -92,7 +194,7 @@ private:
 				glGenerateMipmap(GL_TEXTURE_2D);
 			}
 			else {
-				std::cout << "glGenerateMipmap is not available. Falling back to gluBuild2DMipmaps." << std::endl;
+				//std::cout << "glGenerateMipmap is not available. Falling back to gluBuild2DMipmaps." << std::endl;
 				gluBuild2DMipmaps(GL_TEXTURE_2D, format, width, height, format, GL_UNSIGNED_BYTE, data);
 			}
 
@@ -377,7 +479,7 @@ void myDisplay(void)
 
 	glPushMatrix();
 	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(0.01, 0.01, 0.01);  // Scale if needed
+	glScalef(0.09, 0.09, 0.09);  // Scale if needed
 	glRotatef(0, 1, 0, 0);  // Rotate if needed
 	GLTFModel::DrawModel(gltfModel, "models/test/");
 	glPopMatrix();
@@ -520,6 +622,7 @@ void LoadAssets()
 //=======================================================================
 void main(int argc, char** argv)
 {
+
 	glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
@@ -553,4 +656,3 @@ void main(int argc, char** argv)
 
 	glutMainLoop();
 }
-
