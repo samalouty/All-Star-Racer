@@ -4,6 +4,7 @@
 #include <iostream>
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
+#include <filesystem>
 //#include "Model_GLB.h"
 #include "GLTexture.h"
 #include <glut.h>
@@ -13,14 +14,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <unordered_map>
-#include <vector>
-
 
 GLuint shaderProgram;
 
 tinygltf::Model gltfModel;
 bool modelLoaded = false;
-
 
 class GLTFModel {
 public:
@@ -28,8 +26,20 @@ public:
 		tinygltf::TinyGLTF loader;
 		std::string err;
 		std::string warn;
+		bool ret = false;
 
-		bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+		// Check file extension
+		std::string ext = GetFileExtension(filename);
+		if (ext == "gltf") {
+			ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+		}
+		else if (ext == "glb") {
+			ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename);
+		}
+		else {
+			std::cerr << "Unsupported file format: " << ext << std::endl;
+			return false;
+		}
 
 		if (!warn.empty()) {
 			std::cout << "GLTF loading warning: " << warn << std::endl;
@@ -40,12 +50,7 @@ public:
 		}
 
 		if (!ret) {
-			std::cerr << "Failed to load GLTF file: " << filename << std::endl;
-		}
-
-		if (!GLEW_ARB_vertex_array_object && !GLEW_VERSION_3_0) {
-			std::cerr << "VAOs are not supported on your platform!" << std::endl;
-			return false;
+			std::cerr << "Failed to load GLTF/GLB file: " << filename << std::endl;
 		}
 
 		return ret;
@@ -154,7 +159,7 @@ private:
 					int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
 					const auto& texture = model.textures[textureIndex];
 					const auto& image = model.images[texture.source];
-					meshData.textureID = LoadTexture(modelPath, image.uri);
+					meshData.textureID = LoadTexture(model, image, modelPath);
 				}
 			}
 
@@ -162,101 +167,66 @@ private:
 		}
 	}
 
-	static GLuint LoadTexture(const std::string& modelPath, const std::string& textureName) {
-		std::string directory = modelPath.substr(0, modelPath.find_last_of("/\\"));
-		std::string texturePath = directory + "/" + textureName;
-
-		GLuint textureID = 0;
+	static GLuint LoadTexture(const tinygltf::Model& model, const tinygltf::Image& image, const std::string& modelPath) {
+		GLuint textureID;
 		glGenTextures(1, &textureID);
-		if (textureID == 0) {
-			std::cerr << "Failed to generate texture ID" << std::endl;
+		glBindTexture(GL_TEXTURE_2D, textureID);
+
+		GLenum format;
+		if (image.component == 3) {
+			format = GL_RGB;
+		}
+		else if (image.component == 4) {
+			format = GL_RGBA;
+		}
+		else {
+			std::cerr << "Unsupported number of components in texture: " << image.component << std::endl;
 			return 0;
 		}
 
-		glBindTexture(GL_TEXTURE_2D, textureID);
+		if (image.image.empty()) {
+			// Load external image file
+			std::string texturePath = GetTexturePath(modelPath, image.uri);
 
-		// Set texture wrapping parameters
+			// Load the image using stb_image
+			int width, height, channels;
+			unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);
+			if (data) {
+				glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+				stbi_image_free(data);
+			}
+			else {
+				std::cerr << "Failed to load texture: " << texturePath << std::endl;
+				return 0;
+			}
+		}
+		else {
+			// Use embedded image data
+			glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, image.image.data());
+		}
+
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
 
-		// Set texture filtering parameters
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glBindTexture(GL_TEXTURE_2D, 0);
 
-		int width, height, nrChannels;
-		unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &nrChannels, 0);
-		if (data) {
-			GLenum format = (nrChannels == 4) ? GL_RGBA : GL_RGB;
-			glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-
-			// Check if glGenerateMipmap is available
-			if (GLEW_VERSION_3_0 || GLEW_ARB_framebuffer_object) {
-				glGenerateMipmap(GL_TEXTURE_2D);
-			}
-			else {
-				//std::cout << "glGenerateMipmap is not available. Falling back to gluBuild2DMipmaps." << std::endl;
-				gluBuild2DMipmaps(GL_TEXTURE_2D, format, width, height, format, GL_UNSIGNED_BYTE, data);
-			}
-
-			std::cout << "Loaded texture: " << texturePath << " (" << width << "x" << height << ", " << nrChannels << " channels)" << std::endl;
-		}
-		else {
-			std::cerr << "Failed to load texture: " << texturePath << std::endl;
-			glDeleteTextures(1, &textureID);
-			return 0;
-		}
-
-		stbi_image_free(data);
 		return textureID;
 	}
 
-
-
-	static void DrawMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const std::string& modelPath) {
-		for (const auto& primitive : mesh.primitives) {
-			if (primitive.indices < 0) continue;
-
-			// Load position data
-			const auto& positionAccessor = model.accessors[primitive.attributes.at("POSITION")];
-			const auto& positionView = model.bufferViews[positionAccessor.bufferView];
-			const auto& positionBuffer = model.buffers[positionView.buffer];
-			const float* positions = reinterpret_cast<const float*>(&positionBuffer.data[positionView.byteOffset]);
-
-			// Load texture coordinates
-			const auto& texcoordAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
-			const auto& texcoordView = model.bufferViews[texcoordAccessor.bufferView];
-			const auto& texcoordBuffer = model.buffers[texcoordView.buffer];
-			const float* texcoords = reinterpret_cast<const float*>(&texcoordBuffer.data[texcoordView.byteOffset]);
-
-			// Load indices
-			const auto& indexAccessor = model.accessors[primitive.indices];
-			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
-			const auto& indexBuffer = model.buffers[indexView.buffer];
-			const unsigned short* indices = reinterpret_cast<const unsigned short*>(&indexBuffer.data[indexView.byteOffset]);
-
-			// Load texture if available
-			if (primitive.material >= 0) {
-				const auto& material = model.materials[primitive.material];
-				if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-					int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
-					const auto& texture = model.textures[textureIndex];
-					const auto& image = model.images[texture.source];
-
-					GLuint texID = LoadTexture(modelPath, image.uri);
-					glBindTexture(GL_TEXTURE_2D, texID);
-					glEnable(GL_TEXTURE_2D);
-				}
-			}
-
-			// Draw the mesh
-			glBegin(GL_TRIANGLES);
-			for (size_t i = 0; i < indexAccessor.count; ++i) {
-				unsigned int index = indices[i];
-				glTexCoord2fv(&texcoords[index * 2]); // Apply texture coordinates
-				glVertex3fv(&positions[index * 3]);   // Apply vertex positions
-			}
-			glEnd();
+	static std::string GetFileExtension(const std::string& filename) {
+		size_t pos = filename.find_last_of(".");
+		if (pos != std::string::npos) {
+			return filename.substr(pos + 1);
 		}
+		return "";
+	}
+
+	static std::string GetTexturePath(const std::string& modelPath, const std::string& textureUri) {
+		size_t pos = modelPath.find_last_of("/\\");
+		std::string modelDir = (pos != std::string::npos) ? modelPath.substr(0, pos + 1) : "";
+		return modelDir + "textures/" + textureUri;
 	}
 };
 
@@ -481,7 +451,7 @@ void myDisplay(void)
 	glTranslatef(0, 0, 0);  // Position your model
 	glScalef(0.09, 0.09, 0.09);  // Scale if needed
 	glRotatef(0, 1, 0, 0);  // Rotate if needed
-	GLTFModel::DrawModel(gltfModel, "models/test/");
+	GLTFModel::DrawModel(gltfModel, "models/car/bugatti_bolide_2024.glb");
 	glPopMatrix();
 
 
@@ -610,7 +580,7 @@ void LoadAssets()
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
 	// using tinygltf load gltf model
-	GLTFModel::LoadModel("Models/test/scene.gltf", gltfModel);
+	GLTFModel::LoadModel("Models/car/bugatti_bolide_2024.glb", gltfModel);
 
 	// Loading texture files
 	tex_ground.Load("Textures/ground.bmp");
