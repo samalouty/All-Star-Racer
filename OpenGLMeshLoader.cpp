@@ -28,7 +28,6 @@ public:
 		std::string warn;
 		bool ret = false;
 
-		// Check file extension
 		std::string ext = GetFileExtension(filename);
 		if (ext == "gltf") {
 			ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
@@ -36,183 +35,163 @@ public:
 		else if (ext == "glb") {
 			ret = loader.LoadBinaryFromFile(&model, &err, &warn, filename);
 		}
-		else {
-			std::cerr << "Unsupported file format: " << ext << std::endl;
-			return false;
-		}
 
 		if (!warn.empty()) {
 			std::cout << "GLTF loading warning: " << warn << std::endl;
 		}
-
 		if (!err.empty()) {
 			std::cerr << "GLTF loading error: " << err << std::endl;
-		}
-
-		if (!ret) {
-			std::cerr << "Failed to load GLTF/GLB file: " << filename << std::endl;
 		}
 
 		return ret;
 	}
 
-	static void DrawModel(const tinygltf::Model& model, const std::string& modelPath) {
-		// Pre-process and cache data
-		static std::unordered_map<const tinygltf::Model*, ModelData> modelCache;
-		if (modelCache.find(&model) == modelCache.end()) {
-			modelCache[&model] = PreprocessModel(model, modelPath);
-		}
-		const ModelData& modelData = modelCache[&model];
+	static void DrawModel(const tinygltf::Model& model, const glm::mat4& transform = glm::mat4(1.0f)) {
+		glPushMatrix();
+		glMultMatrixf(glm::value_ptr(transform));
 
-		// Draw all meshes
-		for (const auto& meshData : modelData.meshes) {
-			// Bind texture
-			glBindTexture(GL_TEXTURE_2D, meshData.textureID);
-
-			// Enable client-side capabilities
-			glEnableClientState(GL_VERTEX_ARRAY);
-			glEnableClientState(GL_TEXTURE_COORD_ARRAY);
-
-			// Set up vertex and texture coordinate pointers
-			glVertexPointer(3, GL_FLOAT, 5 * sizeof(float), meshData.vertexData.data());
-			glTexCoordPointer(2, GL_FLOAT, 5 * sizeof(float), meshData.vertexData.data() + 3);
-
-			// Draw
-			glDrawArrays(GL_TRIANGLES, 0, meshData.vertexCount);
-
-			// Disable client-side capabilities
-			glDisableClientState(GL_VERTEX_ARRAY);
-			glDisableClientState(GL_TEXTURE_COORD_ARRAY);
+		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
+		for (size_t i = 0; i < scene.nodes.size(); ++i) {
+			DrawNode(model, scene.nodes[i], glm::mat4(1.0f));
 		}
 
-		// Unbind texture
-		glBindTexture(GL_TEXTURE_2D, 0);
+		glPopMatrix();
 	}
 
 private:
-	struct MeshData {
-		std::vector<float> vertexData;  // Interleaved: x, y, z, u, v
-		int vertexCount;
-		GLuint textureID;
-	};
+	static void DrawNode(const tinygltf::Model& model, int nodeIndex, const glm::mat4& parentTransform) {
+		const tinygltf::Node& node = model.nodes[nodeIndex];
 
-	struct ModelData {
-		std::vector<MeshData> meshes;
-	};
+		// Calculate node's transformation matrix
+		glm::mat4 localTransform = glm::mat4(1.0f);
 
-	static ModelData PreprocessModel(const tinygltf::Model& model, const std::string& modelPath) {
-		ModelData modelData;
-		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
-		for (size_t i = 0; i < scene.nodes.size(); ++i) {
-			ProcessNode(model, model.nodes[scene.nodes[i]], modelPath, modelData);
+		if (node.matrix.size() == 16) {
+			localTransform = glm::make_mat4(node.matrix.data());
 		}
-		return modelData;
-	}
+		else {
+			// Handle TRS (Translation, Rotation, Scale) properties
+			if (node.translation.size() == 3) {
+				localTransform = glm::translate(localTransform,
+					glm::vec3(node.translation[0], node.translation[1], node.translation[2]));
+			}
 
-	static void ProcessNode(const tinygltf::Model& model, const tinygltf::Node& node, const std::string& modelPath, ModelData& modelData) {
+			if (node.rotation.size() == 4) {
+				glm::quat q = glm::quat(node.rotation[3], node.rotation[0],
+					node.rotation[1], node.rotation[2]);
+				localTransform = localTransform * glm::mat4_cast(q);
+			}
+
+			if (node.scale.size() == 3) {
+				localTransform = glm::scale(localTransform,
+					glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
+			}
+		}
+
+		glm::mat4 nodeTransform = parentTransform * localTransform;
+
 		if (node.mesh >= 0) {
-			ProcessMesh(model, model.meshes[node.mesh], modelPath, modelData);
+			DrawMesh(model, model.meshes[node.mesh], nodeTransform);
 		}
 
-		for (size_t i = 0; i < node.children.size(); ++i) {
-			ProcessNode(model, model.nodes[node.children[i]], modelPath, modelData);
+		for (int child : node.children) {
+			DrawNode(model, child, nodeTransform);
 		}
 	}
 
-	static void ProcessMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh, const std::string& modelPath, ModelData& modelData) {
+	static void DrawMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh,
+		const glm::mat4& transform) {
+		glPushMatrix();
+		glMultMatrixf(glm::value_ptr(transform));
+
 		for (const auto& primitive : mesh.primitives) {
 			if (primitive.indices < 0) continue;
 
-			MeshData meshData;
-
-			// Process vertex data
-			const auto& positionAccessor = model.accessors[primitive.attributes.at("POSITION")];
-			const auto& positionView = model.bufferViews[positionAccessor.bufferView];
-			const auto& positionBuffer = model.buffers[positionView.buffer];
-			const float* positions = reinterpret_cast<const float*>(&positionBuffer.data[positionView.byteOffset]);
-
-			const auto& texcoordAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
-			const auto& texcoordView = model.bufferViews[texcoordAccessor.bufferView];
-			const auto& texcoordBuffer = model.buffers[texcoordView.buffer];
-			const float* texcoords = reinterpret_cast<const float*>(&texcoordBuffer.data[texcoordView.byteOffset]);
-
-			const auto& indexAccessor = model.accessors[primitive.indices];
-			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
-			const auto& indexBuffer = model.buffers[indexView.buffer];
-			const unsigned short* indices = reinterpret_cast<const unsigned short*>(&indexBuffer.data[indexView.byteOffset]);
-
-			// Interleave vertex data
-			for (size_t i = 0; i < indexAccessor.count; ++i) {
-				unsigned int index = indices[i];
-				meshData.vertexData.push_back(positions[index * 3]);
-				meshData.vertexData.push_back(positions[index * 3 + 1]);
-				meshData.vertexData.push_back(positions[index * 3 + 2]);
-				meshData.vertexData.push_back(texcoords[index * 2]);
-				meshData.vertexData.push_back(texcoords[index * 2 + 1]);
-			}
-			meshData.vertexCount = indexAccessor.count;
-
-			// Load texture
+			// Set material properties
 			if (primitive.material >= 0) {
 				const auto& material = model.materials[primitive.material];
-				if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-					int textureIndex = material.pbrMetallicRoughness.baseColorTexture.index;
-					const auto& texture = model.textures[textureIndex];
-					const auto& image = model.images[texture.source];
-					meshData.textureID = LoadTexture(model, image, modelPath);
-				}
+				SetMaterial(material);
 			}
 
-			modelData.meshes.push_back(meshData);
+			// Get vertex positions
+			const auto& posAccessor = model.accessors[primitive.attributes.at("POSITION")];
+			const auto& posView = model.bufferViews[posAccessor.bufferView];
+			const float* positions = reinterpret_cast<const float*>(
+				&model.buffers[posView.buffer].data[posView.byteOffset + posAccessor.byteOffset]);
+
+			// Get vertex normals if available
+			const float* normals = nullptr;
+			if (primitive.attributes.find("NORMAL") != primitive.attributes.end()) {
+				const auto& normalAccessor = model.accessors[primitive.attributes.at("NORMAL")];
+				const auto& normalView = model.bufferViews[normalAccessor.bufferView];
+				normals = reinterpret_cast<const float*>(
+					&model.buffers[normalView.buffer].data[normalView.byteOffset + normalAccessor.byteOffset]);
+			}
+
+			// Get texture coordinates if available
+			const float* texcoords = nullptr;
+			if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end()) {
+				const auto& texAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
+				const auto& texView = model.bufferViews[texAccessor.bufferView];
+				texcoords = reinterpret_cast<const float*>(
+					&model.buffers[texView.buffer].data[texView.byteOffset + texAccessor.byteOffset]);
+			}
+
+			// Get indices
+			const auto& indexAccessor = model.accessors[primitive.indices];
+			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
+			const void* indices = &model.buffers[indexView.buffer].data[indexView.byteOffset +
+				indexAccessor.byteOffset];
+
+			// Draw the primitive
+			glBegin(GL_TRIANGLES);
+			for (size_t i = 0; i < indexAccessor.count; i++) {
+				unsigned int idx;
+				switch (indexAccessor.componentType) {
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+					idx = ((unsigned short*)indices)[i];
+					break;
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+					idx = ((unsigned int*)indices)[i];
+					break;
+				default:
+					continue;
+				}
+
+				if (normals) {
+					glNormal3fv(&normals[idx * 3]);
+				}
+				if (texcoords) {
+					glTexCoord2fv(&texcoords[idx * 2]);
+				}
+				glVertex3fv(&positions[idx * 3]);
+			}
+			glEnd();
 		}
+
+		glPopMatrix();
 	}
 
-	static GLuint LoadTexture(const tinygltf::Model& model, const tinygltf::Image& image, const std::string& modelPath) {
-		GLuint textureID;
-		glGenTextures(1, &textureID);
-		glBindTexture(GL_TEXTURE_2D, textureID);
-
-		GLenum format;
-		if (image.component == 3) {
-			format = GL_RGB;
-		}
-		else if (image.component == 4) {
-			format = GL_RGBA;
-		}
-		else {
-			std::cerr << "Unsupported number of components in texture: " << image.component << std::endl;
-			return 0;
+	static void SetMaterial(const tinygltf::Material& material) {
+		if (material.pbrMetallicRoughness.baseColorFactor.size() == 4) {
+			GLfloat color[] = {
+				(GLfloat)material.pbrMetallicRoughness.baseColorFactor[0],
+				(GLfloat)material.pbrMetallicRoughness.baseColorFactor[1],
+				(GLfloat)material.pbrMetallicRoughness.baseColorFactor[2],
+				(GLfloat)material.pbrMetallicRoughness.baseColorFactor[3]
+			};
+			glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, color);
 		}
 
-		if (image.image.empty()) {
-			// Load external image file
-			std::string texturePath = GetTexturePath(modelPath, image.uri);
-
-			// Load the image using stb_image
-			int width, height, channels;
-			unsigned char* data = stbi_load(texturePath.c_str(), &width, &height, &channels, 0);
-			if (data) {
-				glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
-				stbi_image_free(data);
-			}
-			else {
-				std::cerr << "Failed to load texture: " << texturePath << std::endl;
-				return 0;
-			}
+		// Handle textures if present
+		if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+			// Enable texturing
+			glEnable(GL_TEXTURE_2D);
+			// Bind texture (assuming you've loaded textures separately)
+			// glBindTexture(GL_TEXTURE_2D, textureIds[material.pbrMetallicRoughness.baseColorTexture.index]);
 		}
 		else {
-			// Use embedded image data
-			glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, image.image.data());
+			glDisable(GL_TEXTURE_2D);
 		}
-
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		return textureID;
 	}
 
 	static std::string GetFileExtension(const std::string& filename) {
@@ -221,12 +200,6 @@ private:
 			return filename.substr(pos + 1);
 		}
 		return "";
-	}
-
-	static std::string GetTexturePath(const std::string& modelPath, const std::string& textureUri) {
-		size_t pos = modelPath.find_last_of("/\\");
-		std::string modelDir = (pos != std::string::npos) ? modelPath.substr(0, pos + 1) : "";
-		return modelDir + "textures/" + textureUri;
 	}
 };
 
@@ -447,12 +420,19 @@ void myDisplay(void)
 
 	// use tinygltf to draw gltf model
 
-	glPushMatrix();
-	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(0.09, 0.09, 0.09);  // Scale if needed
-	glRotatef(0, 1, 0, 0);  // Rotate if needed
-	GLTFModel::DrawModel(gltfModel, "models/car/bugatti_bolide_2024.glb");
-	glPopMatrix();
+	//glPushMatrix();
+	//glTranslatef(0, 0, 0);  // Position your model
+	//glScalef(0.09, 0.09, 0.09);  // Scale if needed
+	//glRotatef(0, 1, 0, 0);  // Rotate if needed
+	//GLTFModel::DrawModel(gltfModel, "models/test/scene.gltf");
+	//glPopMatrix();
+
+	// In your render function
+	glm::mat4 modelTransform = glm::mat4(1.0f);
+	// Apply any additional transformations you need
+	modelTransform = glm::scale(modelTransform, glm::vec3(1.0f)); // Scale the model if needed
+	GLTFModel::DrawModel(gltfModel, modelTransform);
+
 
 
 
@@ -580,8 +560,10 @@ void LoadAssets()
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
 	// using tinygltf load gltf model
-	GLTFModel::LoadModel("Models/car/bugatti_bolide_2024.glb", gltfModel);
-
+	if (!GLTFModel::LoadModel("models/cone/traffic_cone.glb", gltfModel)) {
+		std::cerr << "Failed to load GLTF model" << std::endl;
+		// Handle error
+	}
 	// Loading texture files
 	tex_ground.Load("Textures/ground.bmp");
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
