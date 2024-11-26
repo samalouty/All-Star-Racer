@@ -1,7 +1,228 @@
+#define TINYGLTF_IMPLEMENTATION
+#define STB_IMAGE_IMPLEMENTATION
+#define STB_IMAGE_WRITE_IMPLEMENTATION
+#include <iostream>
 #include "TextureBuilder.h"
 #include "Model_3DS.h"
+#include <filesystem>
+//#include "Model_GLB.h"
 #include "GLTexture.h"
 #include <glut.h>
+#include "tiny_gltf.h"
+#include <glew.h>
+#include <glm/glm.hpp>
+#include <glm/gtc/matrix_transform.hpp>
+#include <glm/gtc/type_ptr.hpp>
+#include <unordered_map>
+
+GLuint shaderProgram;
+
+tinygltf::Model gltfModel;
+bool modelLoaded = false;
+
+class GLTFModel {
+public:
+	static bool LoadModel(const std::string& filename, tinygltf::Model& model) {
+		tinygltf::TinyGLTF loader;
+		std::string err;
+		std::string warn;
+
+		bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+
+		if (!warn.empty()) {
+			std::cout << "GLTF loading warning: " << warn << std::endl;
+		}
+
+		if (!err.empty()) {
+			std::cerr << "GLTF loading error: " << err << std::endl;
+		}
+
+		if (!ret) {
+			std::cerr << "Failed to load glTF: " << filename << std::endl;
+			return false;
+		}
+
+		return true;
+	}
+
+	static void DrawModel(const tinygltf::Model& model, const glm::mat4& transform = glm::mat4(1.0f)) {
+		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
+		for (size_t i = 0; i < scene.nodes.size(); ++i) {
+			DrawNode(model, scene.nodes[i], transform);
+		}
+	}
+
+private:
+	static std::unordered_map<int, GLuint> textureCache;
+
+	static void DrawNode(const tinygltf::Model& model, int nodeIndex, const glm::mat4& parentTransform) {
+		const tinygltf::Node& node = model.nodes[nodeIndex];
+
+		glm::mat4 localTransform = glm::mat4(1.0f);
+
+		if (node.matrix.size() == 16) {
+			localTransform = glm::make_mat4(node.matrix.data());
+		}
+		else {
+			if (node.translation.size() == 3) {
+				localTransform = glm::translate(localTransform,
+					glm::vec3(node.translation[0], node.translation[1], node.translation[2]));
+			}
+
+			if (node.rotation.size() == 4) {
+				glm::quat q = glm::quat(node.rotation[3], node.rotation[0],
+					node.rotation[1], node.rotation[2]);
+				localTransform = localTransform * glm::mat4_cast(q);
+			}
+
+			if (node.scale.size() == 3) {
+				localTransform = glm::scale(localTransform,
+					glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
+			}
+		}
+
+		glm::mat4 nodeTransform = parentTransform * localTransform;
+
+		if (node.mesh >= 0) {
+			DrawMesh(model, model.meshes[node.mesh], nodeTransform);
+		}
+
+		for (int child : node.children) {
+			DrawNode(model, child, nodeTransform);
+		}
+	}
+
+	static void DrawMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh,
+		const glm::mat4& transform) {
+		glPushMatrix();
+		glMultMatrixf(glm::value_ptr(transform));
+
+		for (const auto& primitive : mesh.primitives) {
+			if (primitive.indices < 0) continue;
+
+			// Set material properties before drawing
+			if (primitive.material >= 0) {
+				const auto& material = model.materials[primitive.material];
+				SetMaterial(model, material);
+			}
+
+			// Get vertex positions
+			const auto& posAccessor = model.accessors[primitive.attributes.at("POSITION")];
+			const auto& posView = model.bufferViews[posAccessor.bufferView];
+			const float* positions = reinterpret_cast<const float*>(
+				&model.buffers[posView.buffer].data[posView.byteOffset + posAccessor.byteOffset]);
+
+			// Get texture coordinates if available
+			const float* texcoords = nullptr;
+			if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end()) {
+				const auto& texAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
+				const auto& texView = model.bufferViews[texAccessor.bufferView];
+				texcoords = reinterpret_cast<const float*>(
+					&model.buffers[texView.buffer].data[texView.byteOffset + texAccessor.byteOffset]);
+			}
+
+			// Get indices
+			const auto& indexAccessor = model.accessors[primitive.indices];
+			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
+			const void* indices = &model.buffers[indexView.buffer].data[indexView.byteOffset +
+				indexAccessor.byteOffset];
+
+			// Draw the primitive
+			glBegin(GL_TRIANGLES);
+			for (size_t i = 0; i < indexAccessor.count; i++) {
+				unsigned int idx;
+				switch (indexAccessor.componentType) {
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+					idx = ((unsigned short*)indices)[i];
+					break;
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+					idx = ((unsigned int*)indices)[i];
+					break;
+				default:
+					continue;
+				}
+
+				if (texcoords) {
+					glTexCoord2f(texcoords[idx * 2], texcoords[idx * 2 + 1]);
+				}
+				glVertex3fv(&positions[idx * 3]);
+			}
+			glEnd();
+		}
+
+		glPopMatrix();
+	}
+
+	static void SetMaterial(const tinygltf::Model& model, const tinygltf::Material& material) {
+		// Set default material color
+		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+
+		if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+			const auto& texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+			if (texture.source >= 0) {
+				GLuint textureId = GetOrCreateTexture(model, texture.source);
+				if (textureId != 0) {
+					glEnable(GL_TEXTURE_2D);
+					glBindTexture(GL_TEXTURE_2D, textureId);
+				}
+			}
+		}
+		else if (!material.pbrMetallicRoughness.baseColorFactor.empty()) {
+			glColor4f(
+				material.pbrMetallicRoughness.baseColorFactor[0],
+				material.pbrMetallicRoughness.baseColorFactor[1],
+				material.pbrMetallicRoughness.baseColorFactor[2],
+				material.pbrMetallicRoughness.baseColorFactor[3]
+			);
+		}
+	}
+
+	static GLuint GetOrCreateTexture(const tinygltf::Model& model, int sourceIndex) {
+		if (textureCache.find(sourceIndex) != textureCache.end()) {
+			return textureCache[sourceIndex];
+		}
+
+		const auto& image = model.images[sourceIndex];
+		GLuint textureId;
+		glGenTextures(1, &textureId);
+		glBindTexture(GL_TEXTURE_2D, textureId);
+
+		GLenum format = GL_RGBA;
+		if (image.component == 3) {
+			format = GL_RGB;
+		}
+
+		glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, &image.image[0]);
+
+		GLenum type = GL_UNSIGNED_BYTE;
+		if (image.bits == 16) {
+			type = GL_UNSIGNED_SHORT;
+		}
+
+		GLint internalFormat = (format == GL_RGB) ? GL_RGB8 : GL_RGBA8;
+
+
+		GLint buildMipmapsResult = gluBuild2DMipmaps(GL_TEXTURE_2D, internalFormat, image.width, image.height,format, type, image.image.data());
+
+		if (buildMipmapsResult != 0) {
+			std::cerr << "Failed to build mipmaps for texture. GLU error: " << gluErrorString(buildMipmapsResult) << std::endl;
+			glDeleteTextures(1, &textureId);
+			return 0;
+		}
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		textureCache[sourceIndex] = textureId;
+		return textureId;
+	}
+};
+
+std::unordered_map<int, GLuint> GLTFModel::textureCache;
+
+
+
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -43,6 +264,8 @@ int cameraZoom = 0;
 Model_3DS model_house;
 Model_3DS model_tree;
 Model_3DS model_bugatti;
+//Model_GLB model_moscow;
+
 
 // Textures
 GLTexture tex_ground;
@@ -133,6 +356,23 @@ void myInit(void)
 	glEnable(GL_DEPTH_TEST);
 
 	glEnable(GL_NORMALIZE);
+
+	// Enable texturing
+	glEnable(GL_TEXTURE_2D);
+
+	// Enable lighting and material properties
+	glEnable(GL_LIGHTING);
+	glEnable(GL_LIGHT0);
+
+	// Enable depth testing
+	glEnable(GL_DEPTH_TEST);
+
+	// Enable normal normalization
+	glEnable(GL_NORMALIZE);
+
+	// Enable color material
+	glEnable(GL_COLOR_MATERIAL);
+	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
 }
 
 //=======================================================================
@@ -181,8 +421,8 @@ void myDisplay(void)
 	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
 
-	// Draw Ground
-	RenderGround();
+	//// Draw Ground
+	//RenderGround();
 
 	// Draw Tree Model
 	glPushMatrix();
@@ -198,11 +438,35 @@ void myDisplay(void)
 	//glPopMatrix();
 
 	//trynna draw a bugatti
+	//glPushMatrix();
+	//glTranslatef(0, 0, 0);  // Position your model
+	//glScalef(0.3, 0.3, 0.3);  // Scale if needed
+	//glRotatef(90, 1, 0, 0);  // Rotate if needed
+	//model_bugatti.Draw();
+	//glPopMatrix();
+
+	//glPushMatrix();
+	//glTranslatef(0, 0, 0);  // Position your model
+	//glScalef(1.0, 1.0, 1.0);  // Scale if needed
+	//glRotatef(0, 1, 0, 0);  // Rotate if needed
+	//model_moscow.Draw();
+	//glPopMatrix();
+
+	// use tinygltf to draw gltf model
+
+	//glPushMatrix();
+	//glTranslatef(0, 0, 0);  // Position your model
+	//glScalef(0.09, 0.09, 0.09);  // Scale if needed
+	//glRotatef(0, 1, 0, 0);  // Rotate if needed
+	//GLTFModel::DrawModel(gltfModel, "models/test/scene.gltf");
+	//glPopMatrix();
+
+	// In your render function
 	glPushMatrix();
 	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(0.3, 0.3, 0.3);  // Scale if needed
-	glRotatef(90, 1, 0, 0);  // Rotate if needed
-	model_bugatti.Draw();
+	glScalef(0.01, 0.01, 0.01);  // Scale if needed
+	glRotatef(0, 1, 0, 0);  // Rotate if needed
+	GLTFModel::DrawModel(gltfModel);
 	glPopMatrix();
 
 
@@ -329,7 +593,11 @@ void LoadAssets()
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
-
+	// using tinygltf load gltf model
+	if (!GLTFModel::LoadModel("models/track2/scene.gltf", gltfModel)) {
+		std::cerr << "Failed to load GLTF model" << std::endl;
+		// Handle error
+	}
 	// Loading texture files
 	tex_ground.Load("Textures/ground.bmp");
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
@@ -340,6 +608,7 @@ void LoadAssets()
 //=======================================================================
 void main(int argc, char** argv)
 {
+
 	glutInit(&argc, argv);
 
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
