@@ -237,7 +237,7 @@ char title[] = "3D Model Loader Sample";
 GLdouble fovy = 45.0;
 GLdouble aspectRatio = (GLdouble)WIDTH / (GLdouble)HEIGHT;
 GLdouble zNear = 0.1;
-GLdouble zFar = 100;
+GLdouble zFar = 10000;
 
 class Vector
 {
@@ -467,7 +467,7 @@ void myDisplay(void)
 	// In your render function
 	glPushMatrix();
 	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(0.1, 0.1, 0.1);  // Scale if needed
+	glScalef(10, 10, 10);  // Scale if needed
 	glRotatef(0, 1, 0, 0);  // Rotate if needed
 	GLTFModel::DrawModel(gltfModel);
 	glPopMatrix();
@@ -604,7 +604,7 @@ void LoadAssets()
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
 	// using tinygltf load gltf model
-	if (!GLTFModel::LoadModel("models/track2/scene.gltf", gltfModel)) {
+	if (!GLTFModel::LoadModel("models/cinos/scene.gltf", gltfModel)) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
