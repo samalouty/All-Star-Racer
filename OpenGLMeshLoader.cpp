@@ -18,6 +18,9 @@
 GLuint shaderProgram;
 
 tinygltf::Model gltfModel;
+tinygltf::Model carModel; 
+
+
 bool modelLoaded = false;
 
 class GLTFModel {
@@ -464,9 +467,16 @@ void myDisplay(void)
 	// In your render function
 	glPushMatrix();
 	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(0.01, 0.01, 0.01);  // Scale if needed
+	glScalef(0.1, 0.1, 0.1);  // Scale if needed
 	glRotatef(0, 1, 0, 0);  // Rotate if needed
 	GLTFModel::DrawModel(gltfModel);
+	glPopMatrix();
+
+	glPushMatrix();
+	glTranslatef(0, 0, 0);  // Position your model
+	glScalef(20, 20, 20);  // Scale if needed
+	glRotatef(90, 0, 1, 0);  // Rotate if needed
+	GLTFModel::DrawModel(carModel);
 	glPopMatrix();
 
 
@@ -595,6 +605,11 @@ void LoadAssets()
 
 	// using tinygltf load gltf model
 	if (!GLTFModel::LoadModel("models/track2/scene.gltf", gltfModel)) {
+		std::cerr << "Failed to load GLTF model" << std::endl;
+		// Handle error
+	}
+
+	if (!GLTFModel::LoadModel("models/chiron/scene.gltf", carModel)) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
