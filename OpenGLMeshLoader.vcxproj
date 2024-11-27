@@ -42,7 +42,6 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <LinkIncremental>false</LinkIncremental>
-
     <IncludePath>D:\GUC\Sem 7\Graphing\vcpkg\vcpkg\installed\x64-windows\include;C:\Users\dodo2\Downloads\vcpkg\installed\x64-windows\include;D:\vcpkg\installed\x64-windows\include;$(IncludePath)</IncludePath>
     <LibraryPath>$(LibraryPath)</LibraryPath>
   </PropertyGroup>
@@ -56,14 +55,12 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-
       <AdditionalIncludeDirectories>$(OutputPath)\..;D:\GUC\Sem 7\Graphing\projectCode\Lab 7;C:\Libraries\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;C:\Libraries\glew-2.1.0\include;C:\Users\dodo2\Downloads\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;D:\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalDependencies>glut32.lib;legacy_stdio_definitions.lib;glfw3.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-
       <AdditionalLibraryDirectories>$(OutputPath)\..;C:\Libraries\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022;C:\Libraries\glew-2.1.0\lib\Release\x64;C:\Users\dodo2\Downloads\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022;D:\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
@@ -89,11 +86,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="GLTexture.cpp" />
+    <ClCompile Include="GLTFModel.cpp" />
     <ClCompile Include="Model_3DS.cpp" />
     <ClCompile Include="OpenGLMeshLoader.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GLTexture.h" />
+    <ClInclude Include="GLTFModel.h" />
     <ClInclude Include="json.hpp" />
     <ClInclude Include="Model_3DS.h" />
     <ClInclude Include="stb_image.h" />

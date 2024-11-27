@@ -24,6 +24,9 @@
     <ClCompile Include="OpenGLMeshLoader.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GLTFModel.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GLTexture.h">
@@ -43,6 +46,9 @@
     </ClInclude>
     <ClInclude Include="stb_image_write.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GLTFModel.h">
+      <Filter>Source Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

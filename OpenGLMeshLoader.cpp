@@ -23,8 +23,29 @@ GLuint shaderProgram;
 tinygltf::Model gltfModel;
 tinygltf::Model carModel; 
 
+class Vector
+{
+public:
+	GLdouble x, y, z;
+	Vector() {}
+	Vector(GLdouble _x, GLdouble _y, GLdouble _z) : x(_x), y(_y), z(_z) {}
+	//================================================================================================//
+	// Operator Overloading; In C++ you can override the behavior of operators for you class objects. //
+	// Here we are overloading the += operator to add a given value to all vector coordinates.        //
+	//================================================================================================//
+	void operator +=(float value)
+	{
+		x += value;
+		y += value;
+		z += value;
+	}
+	void print() const {
+		std::cout << "Vector(" << x << ", " << y << ", " << z << ")" << std::endl;
+	}
+};
 
-bool modelLoaded = false;
+
+
 
 class GLTFModel {
 public:
@@ -231,7 +252,7 @@ int WIDTH = 1280;
 int HEIGHT = 720;
 
 GLuint tex;
-char title[] = "3D Model Loader Sample";
+char title[] = "All Star Racer";
 
 // 3D Projection Options
 GLdouble fovy = 45.0;
@@ -239,26 +260,7 @@ GLdouble aspectRatio = (GLdouble)WIDTH / (GLdouble)HEIGHT;
 GLdouble zNear = 0.1;
 GLdouble zFar = 10000;
 
-class Vector
-{
-public:
-	GLdouble x, y, z;
-	Vector() {}
-	Vector(GLdouble _x, GLdouble _y, GLdouble _z) : x(_x), y(_y), z(_z) {}
-	//================================================================================================//
-	// Operator Overloading; In C++ you can override the behavior of operators for you class objects. //
-	// Here we are overloading the += operator to add a given value to all vector coordinates.        //
-	//================================================================================================//
-	void operator +=(float value)
-	{
-		x += value;
-		y += value;
-		z += value;
-	}
-	void print() const {
-		std::cout << "Vector(" << x << ", " << y << ", " << z << ")" << std::endl;
-	}
-};
+
 
 Vector Eye(20, 5, 20);
 Vector At(0, 0, 0);
@@ -276,12 +278,79 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-enum CameraView { OUTSIDE, INSIDE_FRONT };
-CameraView currentView = OUTSIDE;
+enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON };
+CameraView currentView = THIRD_PERSON;
+float thirdPersonDistance = 1.5f;
 Vector carPosition(0, 0, 0);
 float carRotation = 0; // in degrees, 0 means facing negative z-axis
 Vector cameraOffset(-0.05, 0.16, -0.05);
 float cameraMovementSpeed = 0.05f;
+
+
+Vector carVelocity(0, 0, 0);
+float carSpeed = 0.0f; // in km/h
+float maxSpeed = 300.0f; // km/h
+
+float accelerationTime = 0.5f; // seconds
+float accelerationRate = maxSpeed / accelerationTime;
+bool isAccelerating = false;
+
+
+void updateCarPosition(float deltaTime) {
+	// Convert speed from km/h to units per frame
+	float speedPerFrame = (carSpeed / 3600.0f) * deltaTime;
+
+	// Update car position based on its rotation and speed
+	float radians = carRotation * M_PI / 180.0;
+	carPosition.x -= sin(radians) * speedPerFrame;
+	carPosition.z -= cos(radians) * speedPerFrame;
+
+	// Update camera position in first-person view
+	if (currentView == INSIDE_FRONT) {
+		Eye = Vector(
+			carPosition.x + cameraOffset.x * cos(radians) - cameraOffset.z * sin(radians),
+			carPosition.y + cameraOffset.y,
+			carPosition.z + cameraOffset.x * sin(radians) + cameraOffset.z * cos(radians)
+		);
+
+		At = Vector(
+			carPosition.x + (cameraOffset.x + 1) * cos(radians) - (cameraOffset.z + 1) * sin(radians),
+			carPosition.y + cameraOffset.y,
+			carPosition.z + (cameraOffset.x + 1) * sin(radians) + (cameraOffset.z + 1) * cos(radians)
+		);
+	}
+}
+
+void updateCarSpeed(float deltaTime) {
+	if (isAccelerating && carSpeed < maxSpeed) {
+		carSpeed += accelerationRate * deltaTime;
+		if (carSpeed > maxSpeed) carSpeed = maxSpeed;
+	}
+	else if (!isAccelerating && carSpeed > 0) {
+		carSpeed -= accelerationRate * deltaTime;
+		if (carSpeed < 0) carSpeed = 0;
+	}
+}
+
+void specialKeyboard(int key, int x, int y)
+{
+	switch (key)
+	{
+	case GLUT_KEY_LEFT:
+		carRotation += 2.0f;
+		break;
+	case GLUT_KEY_RIGHT:
+		carRotation -= 2.0f;
+		break;
+	case GLUT_KEY_UP:
+		isAccelerating = true;
+		break;
+	case GLUT_KEY_DOWN:
+		isAccelerating = false;
+		break;
+	}
+	glutPostRedisplay();
+}
 
 //=======================================================================
 // Lighting Configuration Function
@@ -321,7 +390,7 @@ void updateCamera()
 	{
 		Vector lookAtOffset(5 + cameraOffset.x, 0.9 + cameraOffset.y, 0.0 + cameraOffset.z);
 
-		float radians = carRotation * M_PI / 180.0;
+		float radians = -(carRotation * M_PI / 180.0);
 		Vector rotatedCameraOffset(
 			cameraOffset.x * cos(radians) - cameraOffset.z * sin(radians),
 			cameraOffset.y,
@@ -348,6 +417,25 @@ void updateCamera()
 
 		Up = Vector(-0.1, 1, 0);
 	}
+	else if (currentView == THIRD_PERSON) {
+		float radians = carRotation * M_PI / 180.0;
+
+		Eye = Vector(
+			carPosition.x - thirdPersonDistance * sin(radians),
+			carPosition.y + 2.0, // Slightly above the car
+			carPosition.z - thirdPersonDistance * cos(radians)
+		);
+
+		// Look at point is slightly ahead of the car
+		At = Vector(
+			carPosition.x - sin(radians),
+			carPosition.y + 1.0,
+			carPosition.z - cos(radians)
+		);
+
+		Up = Vector(0, 1, 0);
+
+	}
 	else
 	{
 		Eye = Vector(20, 5, 20);
@@ -358,6 +446,7 @@ void updateCamera()
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
+
 
 //=======================================================================
 // Material Configuration Function
@@ -472,6 +561,14 @@ void RenderGround()
 //=======================================================================
 void myDisplay(void)
 {
+	static int lastTime = 0;
+	int currentTime = glutGet(GLUT_ELAPSED_TIME);
+	float deltaTime = (currentTime - lastTime) / 1000.0f;
+	lastTime = currentTime;
+
+	updateCarSpeed(deltaTime);
+	updateCarPosition(deltaTime);
+
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	updateCamera();
@@ -529,13 +626,14 @@ void myDisplay(void)
 	GLTFModel::DrawModel(gltfModel);
 	glPopMatrix();
 
+	// Update car model position and rotation
 	glPushMatrix();
-	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(20, 20, 20);  // Scale if needed
-	glRotatef(90, 0, 1, 0);  // Rotate if needed
+	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+	glRotatef(carRotation, 0, 1, 0);
+	glScalef(20, 20, 20);
+	glRotatef(0, 0, 1, 0);
 	GLTFModel::DrawModel(carModel);
 	glPopMatrix();
-
 
 	//sky box
 	glPushMatrix();
@@ -547,7 +645,7 @@ void myDisplay(void)
 	glBindTexture(GL_TEXTURE_2D, tex);
 	gluQuadricTexture(qobj, true);
 	gluQuadricNormals(qobj, GL_SMOOTH);
-	gluSphere(qobj, 100, 100, 100);
+	gluSphere(qobj, 1000, 100, 100);
 	gluDeleteQuadric(qobj);
 
 
@@ -595,7 +693,10 @@ void myKeyboard(unsigned char button, int x, int y)
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
 	case '1':
-		currentView = (currentView == OUTSIDE) ? INSIDE_FRONT : OUTSIDE;
+		currentView = INSIDE_FRONT;
+		break;
+	case '3':
+		currentView = THIRD_PERSON;
 		break;
 	case 27:
 		exit(0);
@@ -719,6 +820,9 @@ void main(int argc, char** argv)
 	glutDisplayFunc(myDisplay);
 
 	glutKeyboardFunc(myKeyboard);
+
+	glutSpecialFunc(specialKeyboard);
+
 
 	glutMotionFunc(myMotion);
 
