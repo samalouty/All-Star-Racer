@@ -15,6 +15,9 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <unordered_map>
 
+#define M_PI 3.14159265358979323846
+
+
 GLuint shaderProgram;
 
 tinygltf::Model gltfModel;
@@ -224,9 +227,6 @@ private:
 
 std::unordered_map<int, GLuint> GLTFModel::textureCache;
 
-
-
-
 int WIDTH = 1280;
 int HEIGHT = 720;
 
@@ -255,6 +255,9 @@ public:
 		y += value;
 		z += value;
 	}
+	void print() const {
+		std::cout << "Vector(" << x << ", " << y << ", " << z << ")" << std::endl;
+	}
 };
 
 Vector Eye(20, 5, 20);
@@ -272,6 +275,13 @@ Model_3DS model_bugatti;
 
 // Textures
 GLTexture tex_ground;
+
+enum CameraView { OUTSIDE, INSIDE_FRONT };
+CameraView currentView = OUTSIDE;
+Vector carPosition(0, 0, 0);
+float carRotation = 0; // in degrees, 0 means facing negative z-axis
+Vector cameraOffset(-0.05, 0.16, -0.05);
+float cameraMovementSpeed = 0.05f;
 
 //=======================================================================
 // Lighting Configuration Function
@@ -300,6 +310,53 @@ void InitLightSource()
 	// Finally, define light source 0 position in World Space
 	GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
 	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+}
+
+//=======================================================================
+// Camera Function
+//=======================================================================
+void updateCamera()
+{
+	if (currentView == INSIDE_FRONT)
+	{
+		Vector lookAtOffset(5 + cameraOffset.x, 0.9 + cameraOffset.y, 0.0 + cameraOffset.z);
+
+		float radians = carRotation * M_PI / 180.0;
+		Vector rotatedCameraOffset(
+			cameraOffset.x * cos(radians) - cameraOffset.z * sin(radians),
+			cameraOffset.y,
+			cameraOffset.x * sin(radians) + cameraOffset.z * cos(radians)
+		);
+
+		Vector rotatedLookAtOffset(
+			lookAtOffset.x * cos(radians) - lookAtOffset.z * sin(radians),
+			lookAtOffset.y,
+			lookAtOffset.x * sin(radians) + lookAtOffset.z * cos(radians)
+		);
+
+		Eye = Vector(
+			carPosition.x + rotatedCameraOffset.x,
+			carPosition.y + rotatedCameraOffset.y,
+			carPosition.z + rotatedCameraOffset.z
+		);
+
+		At = Vector(
+			carPosition.x + rotatedLookAtOffset.x,
+			carPosition.y + rotatedLookAtOffset.y,
+			carPosition.z + rotatedLookAtOffset.z
+		);
+
+		Up = Vector(-0.1, 1, 0);
+	}
+	else
+	{
+		Eye = Vector(20, 5, 20);
+		At = Vector(0, 0, 0);
+		Up = Vector(0, 1, 0);
+	}
+	cameraOffset.print();
+	glLoadIdentity();
+	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
 
 //=======================================================================
@@ -417,7 +474,7 @@ void myDisplay(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-
+	updateCamera();
 
 	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
 	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
@@ -508,11 +565,37 @@ void myKeyboard(unsigned char button, int x, int y)
 {
 	switch (button)
 	{
+	case 'a':
+		if (currentView == INSIDE_FRONT)
+			cameraOffset.z -= cameraMovementSpeed;
+		else
+			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		break;
+	case 'd':
+		if (currentView == INSIDE_FRONT)
+			cameraOffset.z += cameraMovementSpeed;
+		break;
+	case 'e':
+		if (currentView == INSIDE_FRONT)
+			cameraOffset.x -= cameraMovementSpeed;
+		break;
+	case 'q':
+		if (currentView == INSIDE_FRONT)
+			cameraOffset.x += cameraMovementSpeed;
+		break;
 	case 'w':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+		if (currentView == INSIDE_FRONT)
+			cameraOffset.y += cameraMovementSpeed;
+		break;
+	case 's':
+		if (currentView == INSIDE_FRONT)
+			cameraOffset.y -= cameraMovementSpeed;
 		break;
 	case 'r':
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+		break;
+	case '1':
+		currentView = (currentView == OUTSIDE) ? INSIDE_FRONT : OUTSIDE;
 		break;
 	case 27:
 		exit(0);
@@ -520,7 +603,6 @@ void myKeyboard(unsigned char button, int x, int y)
 	default:
 		break;
 	}
-
 	glutPostRedisplay();
 }
 
