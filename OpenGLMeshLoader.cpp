@@ -22,6 +22,12 @@ GLuint shaderProgram;
 
 tinygltf::Model gltfModel;
 tinygltf::Model carModel; 
+tinygltf::Model redWheelsFrontLeft;
+tinygltf::Model redWheelsFrontRight;
+tinygltf::Model redWheelsBackLeft;
+tinygltf::Model redWheelsBackRight;
+
+
 
 class Vector
 {
@@ -280,7 +286,7 @@ GLTexture tex_ground;
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON };
 CameraView currentView = THIRD_PERSON;
-float thirdPersonDistance = 1.5f;
+float thirdPersonDistance = 3.0f;
 Vector carPosition(0, 0, 0);
 float carRotation = 0; // in degrees, 0 means facing negative z-axis
 Vector cameraOffset(-0.05, 0.16, -0.05);
@@ -294,6 +300,8 @@ float maxSpeed = 300.0f; // km/h
 float accelerationTime = 0.5f; // seconds
 float accelerationRate = maxSpeed / accelerationTime;
 bool isAccelerating = false;
+float wheelRotationX = 145.0f;
+float wheelRotationY = -100.5f;
 
 
 void updateCarPosition(float deltaTime) {
@@ -337,16 +345,16 @@ void specialKeyboard(int key, int x, int y)
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
-		carRotation += 2.0f;
+		wheelRotationY += 2.0f;
 		break;
 	case GLUT_KEY_RIGHT:
-		carRotation -= 2.0f;
+		wheelRotationY -= 2.0f;
 		break;
 	case GLUT_KEY_UP:
-		isAccelerating = true;
+		wheelRotationX += 2.0f;
 		break;
 	case GLUT_KEY_DOWN:
-		isAccelerating = false;
+		wheelRotationX -= 2.0f;
 		break;
 	}
 	glutPostRedisplay();
@@ -619,21 +627,74 @@ void myDisplay(void)
 	//glPopMatrix();
 
 	// In your render function
-	glPushMatrix();
-	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(0.1, 0.1, 0.1);  // Scale if needed
-	glRotatef(0, 1, 0, 0);  // Rotate if needed
-	GLTFModel::DrawModel(gltfModel);
-	glPopMatrix();
+	//glPushMatrix();
+	//glTranslatef(0, 0, 0);  // Position your model
+	//glScalef(0.1, 0.1, 0.1);  // Scale if needed
+	//glRotatef(0, 1, 0, 0);  // Rotate if needed
+	//GLTFModel::DrawModel(gltfModel);
+	//glPopMatrix();
 
 	// Update car model position and rotation
 	glPushMatrix();
 	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
 	glRotatef(carRotation, 0, 1, 0);
-	glScalef(20, 20, 20);
+	glScalef(0.5, 0.5, 0.5);
 	glRotatef(0, 0, 1, 0);
 	GLTFModel::DrawModel(carModel);
 	glPopMatrix();
+
+// Offsets for the wheels relative to the car's position
+	float wheelOffsetX = -0.6f; // Horizontal offset from the car's center
+	float wheelOffsetY = 0.2f; // Vertical offset below the car
+	float wheelOffsetZFront = -0.85f; // Forward offset for front wheels
+	float wheelOffsetZBack = 0.85f; // Backward offset for back wheels
+
+	// Draw back left wheel
+	glPushMatrix();
+	glTranslatef(carPosition.x - wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZFront);
+	glScalef(0.5, 0.5, 0.5); 
+	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+	glRotatef(180, 0, 1, 0);  // to face the right direction
+	GLTFModel::DrawModel(redWheelsBackLeft);
+	glPopMatrix();
+
+	// Draw back right wheel
+	glPushMatrix();
+	glTranslatef(carPosition.x + wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZFront);
+	glScalef(0.5, 0.5, 0.5);
+	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+	glRotatef(0, 0, 1, 0);
+	GLTFModel::DrawModel(redWheelsBackRight);
+	glPopMatrix();
+
+	if (wheelRotationY > 52.5) {
+		wheelRotationY = 52.5; 
+	}
+
+	if (wheelRotationY < -52.5) {
+		wheelRotationY = -52.5;
+	}
+
+
+	// Draw front left wheel
+	glPushMatrix();
+	glTranslatef(carPosition.x - wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZBack);
+	glScalef(0.5, 0.5, 0.5);
+	glRotatef(180 + wheelRotationY, 0, 1, 0);
+	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+	GLTFModel::DrawModel(redWheelsFrontLeft);
+	glPopMatrix();
+
+	// Draw front right wheel
+	glPushMatrix();
+	glTranslatef(carPosition.x + wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZBack);
+	glScalef(0.5, 0.5, 0.5);
+	glRotatef(wheelRotationY,0, 1, 0);
+	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+	GLTFModel::DrawModel(redWheelsFrontRight);
+	glPopMatrix();
+
+
 
 	//sky box
 	glPushMatrix();
@@ -787,17 +848,39 @@ void LoadAssets()
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
 	// using tinygltf load gltf model
-	if (!GLTFModel::LoadModel("models/track2/scene.gltf", gltfModel)) {
+	//if (!GLTFModel::LoadModel("models/track2/scene.gltf", gltfModel)) {
+	//	std::cerr << "Failed to load GLTF model" << std::endl;
+	//	// Handle error
+	//}
+
+	if (!GLTFModel::LoadModel("models/red-car-no-wheels/scene.gltf", carModel)) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
 
-	if (!GLTFModel::LoadModel("models/chiron/scene.gltf", carModel)) {
+	if (!GLTFModel::LoadModel("models/wheel/scene.gltf", redWheelsFrontLeft)) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
+
+	if (!GLTFModel::LoadModel("models/wheel/scene.gltf", redWheelsFrontRight)) {
+		std::cerr << "Failed to load GLTF model" << std::endl;
+		// Handle error
+	}
+
+	if (!GLTFModel::LoadModel("models/wheel/scene.gltf", redWheelsBackLeft)) {
+		std::cerr << "Failed to load GLTF model" << std::endl;
+		// Handle error
+	}
+
+	if (!GLTFModel::LoadModel("models/wheel/scene.gltf", redWheelsBackRight)) {
+		std::cerr << "Failed to load GLTF model" << std::endl;
+		// Handle error
+	}
+
+	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+
 	// Loading texture files
-	tex_ground.Load("Textures/ground.bmp");
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
 }
 
