@@ -633,12 +633,12 @@ void myDisplay(void)
 	//glPopMatrix();
 
 	// In your render function
-	//glPushMatrix();
-	//glTranslatef(0, 0, 0);  // Position your model
-	//glScalef(0.1, 0.1, 0.1);  // Scale if needed
-	//glRotatef(0, 1, 0, 0);  // Rotate if needed
-	//GLTFModel::DrawModel(gltfModel);
-	//glPopMatrix();
+	glPushMatrix();
+	glTranslatef(0, 0, 0);  // Position your model
+	glScalef(1, 1, 1);  // Scale if needed
+	glRotatef(90, 0, 1, 0);  // Rotate if needed
+	gltfModel1.DrawModel();
+	glPopMatrix();
 
 	// Update car model position and rotation
 	glPushMatrix();
@@ -853,11 +853,10 @@ void LoadAssets()
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
-	// using tinygltf load gltf model
-	//if (!GLTFModel::LoadModel("models/track2/scene.gltf", gltfModel)) {
-	//	std::cerr << "Failed to load GLTF model" << std::endl;
-	//	// Handle error
-	//}
+	if (!gltfModel1.LoadModel("models/track2/scene.gltf")) {
+		std::cerr << "Failed to load GLTF model" << std::endl;
+		// Handle error
+	}
 
 	if (!carModel1.LoadModel("models/red-car-no-wheels/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
