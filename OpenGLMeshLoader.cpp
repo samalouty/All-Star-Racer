@@ -29,6 +29,7 @@ tinygltf::Model redWheelsBackRight;
 
 
 
+
 class Vector
 {
 public:
@@ -55,7 +56,7 @@ public:
 
 class GLTFModel {
 public:
-	static bool LoadModel(const std::string& filename, tinygltf::Model& model) {
+	bool LoadModel(const std::string& filename) {
 		tinygltf::TinyGLTF loader;
 		std::string err;
 		std::string warn;
@@ -78,17 +79,18 @@ public:
 		return true;
 	}
 
-	static void DrawModel(const tinygltf::Model& model, const glm::mat4& transform = glm::mat4(1.0f)) {
+	void DrawModel(const glm::mat4& transform = glm::mat4(1.0f)) const {
 		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
 		for (size_t i = 0; i < scene.nodes.size(); ++i) {
-			DrawNode(model, scene.nodes[i], transform);
+			DrawNode(scene.nodes[i], transform);
 		}
 	}
 
 private:
-	static std::unordered_map<int, GLuint> textureCache;
+	tinygltf::Model model;
+	mutable std::unordered_map<int, GLuint> textureCache;
 
-	static void DrawNode(const tinygltf::Model& model, int nodeIndex, const glm::mat4& parentTransform) {
+	void DrawNode(int nodeIndex, const glm::mat4& parentTransform) const {
 		const tinygltf::Node& node = model.nodes[nodeIndex];
 
 		glm::mat4 localTransform = glm::mat4(1.0f);
@@ -117,16 +119,15 @@ private:
 		glm::mat4 nodeTransform = parentTransform * localTransform;
 
 		if (node.mesh >= 0) {
-			DrawMesh(model, model.meshes[node.mesh], nodeTransform);
+			DrawMesh(model.meshes[node.mesh], nodeTransform);
 		}
 
 		for (int child : node.children) {
-			DrawNode(model, child, nodeTransform);
+			DrawNode(child, nodeTransform);
 		}
 	}
 
-	static void DrawMesh(const tinygltf::Model& model, const tinygltf::Mesh& mesh,
-		const glm::mat4& transform) {
+	void DrawMesh(const tinygltf::Mesh& mesh, const glm::mat4& transform) const {
 		glPushMatrix();
 		glMultMatrixf(glm::value_ptr(transform));
 
@@ -136,7 +137,7 @@ private:
 			// Set material properties before drawing
 			if (primitive.material >= 0) {
 				const auto& material = model.materials[primitive.material];
-				SetMaterial(model, material);
+				SetMaterial(material);
 			}
 
 			// Get vertex positions
@@ -186,14 +187,14 @@ private:
 		glPopMatrix();
 	}
 
-	static void SetMaterial(const tinygltf::Model& model, const tinygltf::Material& material) {
+	void SetMaterial(const tinygltf::Material& material) const {
 		// Set default material color
 		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
 		if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
 			const auto& texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
 			if (texture.source >= 0) {
-				GLuint textureId = GetOrCreateTexture(model, texture.source);
+				GLuint textureId = GetOrCreateTexture(texture.source);
 				if (textureId != 0) {
 					glEnable(GL_TEXTURE_2D);
 					glBindTexture(GL_TEXTURE_2D, textureId);
@@ -210,9 +211,9 @@ private:
 		}
 	}
 
-	static GLuint GetOrCreateTexture(const tinygltf::Model& model, int sourceIndex) {
+	GLuint GetOrCreateTexture(int sourceIndex) const {
 		if (textureCache.find(sourceIndex) != textureCache.end()) {
-			return textureCache[sourceIndex];
+			return textureCache.at(sourceIndex);
 		}
 
 		const auto& image = model.images[sourceIndex];
@@ -234,8 +235,7 @@ private:
 
 		GLint internalFormat = (format == GL_RGB) ? GL_RGB8 : GL_RGBA8;
 
-
-		GLint buildMipmapsResult = gluBuild2DMipmaps(GL_TEXTURE_2D, internalFormat, image.width, image.height,format, type, image.image.data());
+		GLint buildMipmapsResult = gluBuild2DMipmaps(GL_TEXTURE_2D, internalFormat, image.width, image.height, format, type, image.image.data());
 
 		if (buildMipmapsResult != 0) {
 			std::cerr << "Failed to build mipmaps for texture. GLU error: " << gluErrorString(buildMipmapsResult) << std::endl;
@@ -252,7 +252,12 @@ private:
 	}
 };
 
-std::unordered_map<int, GLuint> GLTFModel::textureCache;
+GLTFModel gltfModel1;
+GLTFModel carModel1;
+GLTFModel redWheelsFrontLeft1;
+GLTFModel redWheelsFrontRight1;
+GLTFModel redWheelsBackLeft1;
+GLTFModel redWheelsBackRight1;
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -641,7 +646,7 @@ void myDisplay(void)
 	glRotatef(carRotation, 0, 1, 0);
 	glScalef(0.5, 0.5, 0.5);
 	glRotatef(0, 0, 1, 0);
-	GLTFModel::DrawModel(carModel);
+	carModel1.DrawModel();
 	glPopMatrix();
 
 // Offsets for the wheels relative to the car's position
@@ -656,7 +661,7 @@ void myDisplay(void)
 	glScalef(0.5, 0.5, 0.5); 
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
 	glRotatef(180, 0, 1, 0);  // to face the right direction
-	GLTFModel::DrawModel(redWheelsBackLeft);
+	redWheelsBackLeft1.DrawModel();
 	glPopMatrix();
 
 	// Draw back right wheel
@@ -665,7 +670,7 @@ void myDisplay(void)
 	glScalef(0.5, 0.5, 0.5);
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
 	glRotatef(0, 0, 1, 0);
-	GLTFModel::DrawModel(redWheelsBackRight);
+	redWheelsBackRight1.DrawModel();
 	glPopMatrix();
 
 	if (wheelRotationY > 52.5) {
@@ -683,7 +688,7 @@ void myDisplay(void)
 	glScalef(0.5, 0.5, 0.5);
 	glRotatef(180 + wheelRotationY, 0, 1, 0);
 	glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-	GLTFModel::DrawModel(redWheelsFrontLeft);
+	redWheelsFrontLeft1.DrawModel();
 	glPopMatrix();
 
 	// Draw front right wheel
@@ -692,7 +697,7 @@ void myDisplay(void)
 	glScalef(0.5, 0.5, 0.5);
 	glRotatef(wheelRotationY,0, 1, 0);
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-	GLTFModel::DrawModel(redWheelsFrontRight);
+	redWheelsFrontRight1.DrawModel(); 
 	glPopMatrix();
 
 
@@ -854,27 +859,27 @@ void LoadAssets()
 	//	// Handle error
 	//}
 
-	if (!GLTFModel::LoadModel("models/red-car-no-wheels/scene.gltf", carModel)) {
+	if (!carModel1.LoadModel("models/red-car-no-wheels/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
 
-	if (!GLTFModel::LoadModel("models/wheel/scene.gltf", redWheelsFrontLeft)) {
+	if (!redWheelsFrontLeft1.LoadModel("models/wheel/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
 
-	if (!GLTFModel::LoadModel("models/wheel/scene.gltf", redWheelsFrontRight)) {
+	if (!redWheelsFrontRight1.LoadModel("models/wheel/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
 
-	if (!GLTFModel::LoadModel("models/wheel/scene.gltf", redWheelsBackLeft)) {
+	if (!redWheelsBackLeft1.LoadModel("models/wheel/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
 
-	if (!GLTFModel::LoadModel("models/wheel/scene.gltf", redWheelsBackRight)) {
+	if (!redWheelsBackRight1.LoadModel("models/wheel/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
