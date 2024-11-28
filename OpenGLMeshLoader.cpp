@@ -289,7 +289,8 @@ CameraView currentView = THIRD_PERSON;
 float thirdPersonDistance = 3.0f;
 Vector carPosition(0, 0, 0);
 float carRotation = 0; // in degrees, 0 means facing negative z-axis
-Vector cameraOffset(-0.05, 0.16, -0.05);
+//Vector(0.2, 0.61, -0.1)
+Vector cameraOffset(0.2, 0.61, -0.1);
 float cameraMovementSpeed = 0.05f;
 
 
@@ -312,14 +313,14 @@ void updateCarPosition(float deltaTime) {
 	float radians = carRotation * M_PI / 180.0;
 	carPosition.x -= sin(radians) * speedPerFrame;
 	carPosition.z -= cos(radians) * speedPerFrame;
-
+	//Vector(-0.05, 0.51, 0.15)
 	// Update camera position in first-person view
 	if (currentView == INSIDE_FRONT) {
 		Eye = Vector(
 			carPosition.x + cameraOffset.x * cos(radians) - cameraOffset.z * sin(radians),
-			carPosition.y + cameraOffset.y,
+			carPosition.y + cameraOffset.y + 10000,
 			carPosition.z + cameraOffset.x * sin(radians) + cameraOffset.z * cos(radians)
-		);
+		);	
 
 		At = Vector(
 			carPosition.x + (cameraOffset.x + 1) * cos(radians) - (cameraOffset.z + 1) * sin(radians),
@@ -396,7 +397,7 @@ void updateCamera()
 {
 	if (currentView == INSIDE_FRONT)
 	{
-		Vector lookAtOffset(5 + cameraOffset.x, 0.9 + cameraOffset.y, 0.0 + cameraOffset.z);
+		Vector lookAtOffset(0 + cameraOffset.x, 0.05 + cameraOffset.y, 0.4 + cameraOffset.z);
 
 		float radians = -(carRotation * M_PI / 180.0);
 		Vector rotatedCameraOffset(
@@ -681,7 +682,7 @@ void myDisplay(void)
 	glTranslatef(carPosition.x - wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZBack);
 	glScalef(0.5, 0.5, 0.5);
 	glRotatef(180 + wheelRotationY, 0, 1, 0);
-	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+	glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
 	GLTFModel::DrawModel(redWheelsFrontLeft);
 	glPopMatrix();
 
