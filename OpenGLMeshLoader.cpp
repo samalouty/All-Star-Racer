@@ -305,13 +305,13 @@ float thirdPersonPitch = 0.0f;
 Vector thirdPersonOffset(-0.1, 2.4, -8.7); // Initial offset behind and above the car
 float thirdPersonMovementSpeed = 0.1f;
 
-Vector carVelocity(0, 0, 0);
-float carSpeed = 0.0f; // in km/h
-float maxSpeed = 300.0f; // km/h
+//Vector carVelocity(0, 0, 0);
+//float carSpeed = 0.0f; // in km/h
+//float maxSpeed = 300.0f; // km/h
 
-float accelerationTime = 0.5f; // seconds
-float accelerationRate = maxSpeed / accelerationTime;
-bool isAccelerating = false;
+//float accelerationTime = 0.5f; // seconds
+//float accelerationRate = maxSpeed / accelerationTime;
+//bool isAccelerating = false;
 float wheelRotationX = 0.0f;
 float wheelRotationY = 0.0f;
 
@@ -321,7 +321,50 @@ float acceleration = 20.0f; // Acceleration in units per second^2
 float deceleration = 30.0f; // Deceleration in units per second^2
 float turnSpeed = 90.0f; // Turn speed in degrees per second
 
+//=======================================================================
+// Car Motion Functions
+//=======================================================================
+void updateCarPosition(float deltaTime) {
+	float radians = carRotation * M_PI / 180.0;
 
+	// Update position based on current speed and rotation
+	carPosition.x -= sin(radians) * carSpeed * deltaTime;
+	carPosition.z -= cos(radians) * carSpeed * deltaTime;
+
+	// Update wheel rotation based on speed
+	wheelRotationX += carSpeed * 360.0f * deltaTime; // Adjust this multiplier as needed
+}
+
+void handleCarControls(float deltaTime) {
+	// Accelerate
+	if (glutGetModifiers() & GLUT_KEY_UP) {
+		carSpeed += acceleration * deltaTime;
+		if (carSpeed > maxSpeed) carSpeed = maxSpeed;
+	}
+	// Brake
+	else if (glutGetModifiers() & GLUT_KEY_DOWN) {
+		carSpeed -= deceleration * deltaTime;
+		if (carSpeed < 0) carSpeed = 0;
+	}
+	// Coast (slow down gradually)
+	else {
+		carSpeed -= deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+		if (carSpeed < 0) carSpeed = 0;
+	}
+
+	// Turn left
+	if (wheelRotationY > 0) {
+		carRotation += turnSpeed * deltaTime * (carSpeed / maxSpeed);
+	}
+	// Turn right
+	else if (wheelRotationY < 0) {
+		carRotation -= turnSpeed * deltaTime * (carSpeed / maxSpeed);
+	}
+
+	// Normalize rotation to 0-360 degrees
+	while (carRotation >= 360.0f) carRotation -= 360.0f;
+	while (carRotation < 0.0f) carRotation += 360.0f;
+}
 
 //=======================================================================
 // Lighting Configuration Function
@@ -423,7 +466,7 @@ void updateCamera()
 		);
 
 		Up = Vector(0, 1, 0);
-		rotatedLookAt.print();
+		/*rotatedLookAt.print();*/
 	}
 	else
 	{
@@ -432,7 +475,7 @@ void updateCamera()
 		Up = Vector(0, 1, 0);
 	}
 	printf("camera");
-	thirdPersonOffset.print();
+	/*thirdPersonOffset.print();*/
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
