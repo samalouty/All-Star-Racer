@@ -441,7 +441,7 @@ void updateCamera()
 	else if (currentView == THIRD_PERSON)
 	{
 		float radians = carRotation * M_PI / 180.0;
-
+		
 		// Calculate camera position
 		Eye.x = carPosition.x - sin(radians) * cameraDistance;
 		Eye.y = carPosition.y + cameraHeight;
@@ -453,6 +453,8 @@ void updateCamera()
 		At.z = carPosition.z + cos(radians) * cameraLookAheadDistance;
 
 		Up = Vector(0, 1, 0); // Keep the up vector vertical
+
+
 	}
 	else
 	{
@@ -660,8 +662,11 @@ void myDisplay(void)
 
 	// Draw back left wheel
 	glPushMatrix();
-	glTranslatef(carPosition.x - wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZFront);
 	//glScalef(1, 1, 1); 
+	glTranslatef(carPosition.x, carPosition.y , carPosition.z);
+	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+	glTranslatef( -wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
 	glRotatef(180, 0, 1, 0);  // to face the right direction
 	redWheelsBackLeft1.DrawModel();
@@ -669,7 +674,9 @@ void myDisplay(void)
 
 	// Draw back right wheel
 	glPushMatrix();
-	glTranslatef(carPosition.x + wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZFront);
+	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+	glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
 	//glScalef(0.5, 0.5, 0.5);
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
 	glRotatef(0, 0, 1, 0);
@@ -687,7 +694,9 @@ void myDisplay(void)
 
 	// Draw front left wheel
 	glPushMatrix();
-	glTranslatef(carPosition.x - wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZBack);
+	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+	glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
 	//glScalef(0.5, 0.5, 0.5);
 	glRotatef(180 + wheelRotationY, 0, 1, 0);
 	glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
@@ -696,8 +705,9 @@ void myDisplay(void)
 
 	// Draw front right wheel
 	glPushMatrix();
-	glTranslatef(carPosition.x + wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZBack);
-	//glScalef(0.5, 0.5, 0.5);
+	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+	glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
 	glRotatef(wheelRotationY,0, 1, 0);
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
 	redWheelsFrontRight1.DrawModel(); 
