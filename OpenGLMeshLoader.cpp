@@ -14,8 +14,11 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <unordered_map>
+#include <vector>
+#include <algorithm>
 
 #define M_PI 3.14159265358979323846
+
 
 
 GLuint shaderProgram;
@@ -47,6 +50,8 @@ public:
 
 class GLTFModel {
 public:
+	tinygltf::Model model;
+
 	bool LoadModel(const std::string& filename) {
 		tinygltf::TinyGLTF loader;
 		std::string err;
@@ -78,7 +83,6 @@ public:
 	}
 
 private:
-	tinygltf::Model model;
 	mutable std::unordered_map<int, GLuint> textureCache;
 
 	void DrawNode(int nodeIndex, const glm::mat4& parentTransform) const {
@@ -283,7 +287,7 @@ GLTexture tex_ground;
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON };
 CameraView currentView = THIRD_PERSON;
 float thirdPersonDistance = 3.0f;
-Vector carPosition(0, 0, 0);
+Vector carPosition(0, 2, 0);
 float carRotation = 0; // in degrees, 0 means facing negative z-axis
 //Vector(0.2, 0.61, -0.1)
 Vector cameraOffset(0.2, 1.11, -0.2);
@@ -310,13 +314,13 @@ float wheelRotationSpeed = 180.0f; // Degrees per second
 float steeringAngle = 0.0f;
 float maxSteeringAngle = 30.0f; // Maximum steering angle in degrees
 float steeringSpeed = 90.0f; // Degrees per second
-float deceleration = 5.0f; // Units per second^2
+float deceleration = 100.0f; // Units per second^2
 
 float carSpeed = 0.0f;
-float maxSpeed = 30.0f; // Maximum speed in units per second
-float acceleration = 3.0f; // Acceleration in units per second^2
+float maxSpeed = 100.0f; // Maximum speed in units per second
+float acceleration = 10.0f; // Acceleration in units per second^2
 //float deceleration = 3.0f; // Deceleration in units per second^2
-float turnSpeed = 2.0f; // Turn speed in degrees per second
+float turnSpeed = 60.0f; // Turn speed in degrees per second
 bool isAccelerating = false;
 bool isBraking = false;
 
@@ -324,18 +328,150 @@ float cameraDistance = 8.0f; // Distance behind the car
 float cameraHeight = 3.0f; // Height above the car
 float cameraLookAheadDistance = 10.0f; // How far ahead of the car to look
 
+struct BoundingBox {
+	Vector min;
+	Vector max;
+};
+
+struct Triangle {
+	Vector v1, v2, v3;
+};
+
+std::vector<Triangle> trackTriangles;
+
+//=======================================================================
+// Collision Detection Functions
+//=======================================================================
+
+void extractTrianglesFromModel(const tinygltf::Model& model, std::vector<Triangle>& triangles) {
+	for (const auto& mesh : model.meshes) {
+		for (const auto& primitive : mesh.primitives) {
+			if (primitive.indices < 0) continue;
+
+			const auto& posAccessor = model.accessors[primitive.attributes.at("POSITION")];
+			const auto& posView = model.bufferViews[posAccessor.bufferView];
+			const float* positions = reinterpret_cast<const float*>(
+				&model.buffers[posView.buffer].data[posView.byteOffset + posAccessor.byteOffset]);
+
+			const auto& indexAccessor = model.accessors[primitive.indices];
+			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
+			const void* indices = &model.buffers[indexView.buffer].data[indexView.byteOffset + indexAccessor.byteOffset];
+
+			for (size_t i = 0; i < indexAccessor.count; i += 3) {
+				unsigned int idx1, idx2, idx3;
+				switch (indexAccessor.componentType) {
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+					idx1 = ((unsigned short*)indices)[i];
+					idx2 = ((unsigned short*)indices)[i + 1];
+					idx3 = ((unsigned short*)indices)[i + 2];
+					break;
+				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+					idx1 = ((unsigned int*)indices)[i];
+					idx2 = ((unsigned int*)indices)[i + 1];
+					idx3 = ((unsigned int*)indices)[i + 2];
+					break;
+				default:
+					continue;
+				}
+
+				Triangle tri;
+				tri.v1 = Vector(positions[idx1 * 3], positions[idx1 * 3 + 1], positions[idx1 * 3 + 2]);
+				tri.v2 = Vector(positions[idx2 * 3], positions[idx2 * 3 + 1], positions[idx2 * 3 + 2]);
+				tri.v3 = Vector(positions[idx3 * 3], positions[idx3 * 3 + 1], positions[idx3 * 3 + 2]);
+				triangles.push_back(tri);
+			}
+		}
+	}
+}
+
+bool isPointInTriangle(const Vector& p, const Triangle& t) {
+	// Manually calculate vector differences
+	Vector v0 = { t.v3.x - t.v1.x, t.v3.y - t.v1.y, t.v3.z - t.v1.z };
+	Vector v1 = { t.v2.x - t.v1.x, t.v2.y - t.v1.y, t.v2.z - t.v1.z };
+	Vector v2 = { p.x - t.v1.x, p.y - t.v1.y, p.z - t.v1.z };
+
+	float dot00 = v0.x * v0.x + v0.z * v0.z;
+	float dot01 = v0.x * v1.x + v0.z * v1.z;
+	float dot02 = v0.x * v2.x + v0.z * v2.z;
+	float dot11 = v1.x * v1.x + v1.z * v1.z;
+	float dot12 = v1.x * v2.x + v1.z * v2.z;
+
+	float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+	float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+	float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+	return (u >= 0) && (v >= 0) && (u + v < 1);
+}
+
+bool checkCollisionInDirection(const Vector& carPos, const Vector& direction, float distance) {
+	Vector endPoint = {
+		carPos.x + direction.x * distance,
+		carPos.y + direction.y * distance,
+		carPos.z + direction.z * distance
+	};
+
+	for (const auto& tri : trackTriangles) {
+		if (isPointInTriangle(endPoint, tri)) {
+			float triangleY = std::max({ tri.v1.y, tri.v2.y, tri.v3.y });
+			if (endPoint.y <= triangleY) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+// Function to check collision between car and track
+bool checkCollision(const Vector& carPos) {
+	for (const auto& tri : trackTriangles) {
+		if (isPointInTriangle(carPos, tri)) {
+			// Check if the car's y position is above the triangle's y position
+			float triangleY = std::max({ tri.v1.y, tri.v2.y, tri.v3.y });
+			if (carPos.y <= triangleY) {
+				return true;
+			}
+		}
+	}
+	return false;
+}
+
+
 //=======================================================================
 // Car Motion Functions
 //=======================================================================
 void updateCarPosition(float deltaTime) {
 	float radians = carRotation * M_PI / 180.0;
+	Vector forward = { sin(radians), 0, cos(radians) };
+	Vector right = { cos(radians), 0, -sin(radians) };
 
-	// Update position based on current speed and rotation
-	carPosition.x += sin(radians) * carSpeed * deltaTime;
-	carPosition.z += cos(radians) * carSpeed * deltaTime;
+	// Calculate new position
+	Vector newPosition = carPosition;
+	newPosition.x += forward.x * carSpeed * deltaTime;
+	newPosition.z += forward.z * carSpeed * deltaTime;
+
+	// Check for collisions
+	bool collisionFront = checkCollisionInDirection(carPosition, forward, 1.0f);
+	bool collisionBack = checkCollisionInDirection(carPosition, { -forward.x, -forward.y, -forward.z }, 1.0f);
+	bool collisionRight = checkCollisionInDirection(carPosition, right, 0.5f);
+	bool collisionLeft = checkCollisionInDirection(carPosition, { -right.x, -right.y, -right.z }, 0.5f);
+	bool collisionBelow = checkCollisionInDirection(carPosition, { 0, -1, 0 }, 0.0f);
+
+	if (collisionFront || collisionBack || collisionRight || collisionLeft) {
+		// If collision detected from front, back, or sides, stop the car
+		carSpeed = 0;
+	}
+	else if (collisionBelow) {
+		// If collision detected from below, update the car's position (it's on the track)
+		carPosition = newPosition;
+	}
+	else {
+		// If no collision, update the car's position and apply gravity
+		carPosition = newPosition;
+		//carPosition.y -= 9.8f * deltaTime; // Simple gravity simulation
+	}
 
 	// Update wheel rotation based on speed
-	wheelRotationX += carSpeed * 360.0f * deltaTime; // Adjust this multiplier as needed
+	wheelRotationX += carSpeed * 360.0f * deltaTime;
 }
 
 void handleCarControls(float deltaTime) {
@@ -935,6 +1071,9 @@ void LoadAssets()
 		// Handle error
 	}
 
+	extractTrianglesFromModel(gltfModel1.model, trackTriangles);
+
+
 	if (!carModel1.LoadModel("models/red-car-no-wheels/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
@@ -969,6 +1108,12 @@ void LoadAssets()
 //=======================================================================
 // Main Function
 //=======================================================================
+
+void timer(int value) {
+	glutPostRedisplay();
+	glutTimerFunc(16, timer, 0);
+}
+
 void main(int argc, char** argv)
 {
 
@@ -1005,6 +1150,8 @@ void main(int argc, char** argv)
 	glEnable(GL_COLOR_MATERIAL);
 
 	glShadeModel(GL_SMOOTH);
+
+	glutTimerFunc(0, timer, 0);  // Start the timer
 
 	glutMainLoop();
 }
