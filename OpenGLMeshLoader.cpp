@@ -20,15 +20,6 @@
 
 GLuint shaderProgram;
 
-tinygltf::Model gltfModel;
-tinygltf::Model carModel; 
-tinygltf::Model redWheelsFrontLeft;
-tinygltf::Model redWheelsFrontRight;
-tinygltf::Model redWheelsBackLeft;
-tinygltf::Model redWheelsBackRight;
-
-
-
 
 class Vector
 {
@@ -315,13 +306,23 @@ float thirdPersonMovementSpeed = 0.1f;
 float wheelRotationX = 0.0f;
 float wheelRotationY = 0.0f;
 
+float wheelRotationSpeed = 180.0f; // Degrees per second
+float steeringAngle = 0.0f;
+float maxSteeringAngle = 30.0f; // Maximum steering angle in degrees
+float steeringSpeed = 90.0f; // Degrees per second
+float deceleration = 5.0f; // Units per second^2
+
 float carSpeed = 0.0f;
 float maxSpeed = 30.0f; // Maximum speed in units per second
 float acceleration = 3.0f; // Acceleration in units per second^2
-float deceleration = 30.0f; // Deceleration in units per second^2
-float turnSpeed = 90.0f; // Turn speed in degrees per second
+//float deceleration = 3.0f; // Deceleration in units per second^2
+float turnSpeed = 2.0f; // Turn speed in degrees per second
 bool isAccelerating = false;
 bool isBraking = false;
+
+float cameraDistance = 8.0f; // Distance behind the car
+float cameraHeight = 3.0f; // Height above the car
+float cameraLookAheadDistance = 10.0f; // How far ahead of the car to look
 
 //=======================================================================
 // Car Motion Functions
@@ -440,35 +441,18 @@ void updateCamera()
 	else if (currentView == THIRD_PERSON)
 	{
 		float radians = carRotation * M_PI / 180.0;
-		float yawRadians = thirdPersonYaw * M_PI / 180.0;
-		float pitchRadians = thirdPersonPitch * M_PI / 180.0;
 
-		// Calculate the rotated third-person offset
-		Vector rotatedOffset(
-			thirdPersonOffset.x * cos(radians) - thirdPersonOffset.z * sin(radians),
-			thirdPersonOffset.y,
-			thirdPersonOffset.x * sin(radians) + thirdPersonOffset.z * cos(radians)
-		);
+		// Calculate camera position
+		Eye.x = carPosition.x - sin(radians) * cameraDistance;
+		Eye.y = carPosition.y + cameraHeight;
+		Eye.z = carPosition.z - cos(radians) * cameraDistance;
 
-		// Calculate the camera position
-		Eye = Vector(
-			carPosition.x + rotatedOffset.x,
-			carPosition.y + rotatedOffset.y,
-			carPosition.z + rotatedOffset.z
-		);
+		// Calculate look-at point
+		At.x = carPosition.x + sin(radians) * cameraLookAheadDistance;
+		At.y = carPosition.y + 1.0f; // Look slightly above the car
+		At.z = carPosition.z + cos(radians) * cameraLookAheadDistance;
 
-		// Calculate the rotated look-at vector
-		Vector rotatedLookAt(0.0671896, 0.766044, 0.639266);
-
-		// Calculate the look-at point
-		At = Vector(
-			carPosition.x + rotatedLookAt.x,
-			carPosition.y + rotatedLookAt.y,
-			carPosition.z + rotatedLookAt.z
-		);
-
-		Up = Vector(0, 1, 0);
-		/*rotatedLookAt.print();*/
+		Up = Vector(0, 1, 0); // Keep the up vector vertical
 	}
 	else
 	{
@@ -669,10 +653,10 @@ void myDisplay(void)
 	glPopMatrix();
 
 // Offsets for the wheels relative to the car's position
-	float wheelOffsetX = -0.6f; // Horizontal offset from the car's center
-	float wheelOffsetY = 0.2f; // Vertical offset below the car
-	float wheelOffsetZFront = -0.85f; // Forward offset for front wheels
-	float wheelOffsetZBack = 0.85f; // Backward offset for back wheels
+	float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
+	float wheelOffsetY = 0.5f; // Vertical offset below the car
+	float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
+	float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
 
 	// Draw back left wheel
 	glPushMatrix();
@@ -749,30 +733,30 @@ void myKeyboard(unsigned char button, int x, int y)
 {
 	switch (button)
 	{
-	//case 'w':
-	//	if (currentView == THIRD_PERSON)
-	//		thirdPersonOffset.y += thirdPersonMovementSpeed;
-	//	break;
-	//case 's':
-	//	if (currentView == THIRD_PERSON)
-	//		thirdPersonOffset.y -= thirdPersonMovementSpeed;
-	//	break;
-	//case 'a':
-	//	if (currentView == THIRD_PERSON)
-	//		thirdPersonOffset.x -= thirdPersonMovementSpeed;
-	//	break;
-	//case 'd':
-	//	if (currentView == THIRD_PERSON)
-	//		thirdPersonOffset.x += thirdPersonMovementSpeed;
-	//	break;
-	//case 'q':
-	//	if (currentView == THIRD_PERSON)
-	//		thirdPersonOffset.z += thirdPersonMovementSpeed;
-	//	break;
-	//case 'e':
-	//	if (currentView == THIRD_PERSON)
-	//		thirdPersonOffset.z -= thirdPersonMovementSpeed;
-	//	break;
+	case 'w':
+		if (currentView == THIRD_PERSON)
+			thirdPersonOffset.y += thirdPersonMovementSpeed;
+		break;
+	case 's':
+		if (currentView == THIRD_PERSON)
+			thirdPersonOffset.y -= thirdPersonMovementSpeed;
+		break;
+	case 'a':
+		if (currentView == THIRD_PERSON)
+			thirdPersonOffset.x -= thirdPersonMovementSpeed;
+		break;
+	case 'd':
+		if (currentView == THIRD_PERSON)
+			thirdPersonOffset.x += thirdPersonMovementSpeed;
+		break;
+	case 'q':
+		if (currentView == THIRD_PERSON)
+			thirdPersonOffset.z += thirdPersonMovementSpeed;
+		break;
+	case 'e':
+		if (currentView == THIRD_PERSON)
+			thirdPersonOffset.z -= thirdPersonMovementSpeed;
+		break;
 	case 'r':
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
