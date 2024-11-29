@@ -577,7 +577,7 @@ void updateCamera()
 	else if (currentView == THIRD_PERSON)
 	{
 		float radians = carRotation * M_PI / 180.0;
-		
+
 		// Calculate camera position
 		Eye.x = carPosition.x - sin(radians) * cameraDistance;
 		Eye.y = carPosition.y + cameraHeight;
@@ -790,7 +790,7 @@ void myDisplay(void)
 	carModel1.DrawModel();
 	glPopMatrix();
 
-// Offsets for the wheels relative to the car's position
+	// Offsets for the wheels relative to the car's position
 	float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
 	float wheelOffsetY = 0.5f; // Vertical offset below the car
 	float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
@@ -799,9 +799,9 @@ void myDisplay(void)
 	// Draw back left wheel
 	glPushMatrix();
 	//glScalef(1, 1, 1); 
-	glTranslatef(carPosition.x, carPosition.y , carPosition.z);
+	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
 	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef( -wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+	glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
 
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
 	glRotatef(180, 0, 1, 0);  // to face the right direction
@@ -820,7 +820,7 @@ void myDisplay(void)
 	glPopMatrix();
 
 	if (wheelRotationY > 52.5) {
-		wheelRotationY = 52.5; 
+		wheelRotationY = 52.5;
 	}
 
 	if (wheelRotationY < -52.5) {
@@ -844,9 +844,9 @@ void myDisplay(void)
 	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
 	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
 	glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
-	glRotatef(wheelRotationY,0, 1, 0);
+	glRotatef(wheelRotationY, 0, 1, 0);
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-	redWheelsFrontRight1.DrawModel(); 
+	redWheelsFrontRight1.DrawModel();
 	glPopMatrix();
 
 
@@ -912,30 +912,30 @@ void myKeyboard(unsigned char button, int x, int y)
 	case '3':
 		currentView = THIRD_PERSON;
 		break;
-	//case 'j': // Rotate camera left
-	//	if (currentView == INSIDE_FRONT)
-	//		cameraYaw += cameraRotationSpeed;
-	//	else if (currentView == THIRD_PERSON)
-	//		thirdPersonYaw += cameraRotationSpeed;
-	//	break;
-	//case 'l': // Rotate camera right
-	//	if (currentView == INSIDE_FRONT)
-	//		cameraYaw -= cameraRotationSpeed;
-	//	else if (currentView == THIRD_PERSON)
-	//		thirdPersonYaw -= cameraRotationSpeed;
-	//	break;
-	//case 'i': // Rotate camera up
-	//	if (currentView == INSIDE_FRONT)
-	//		cameraPitch += cameraRotationSpeed;
-	//	else if (currentView == THIRD_PERSON)
-	//		thirdPersonPitch += cameraRotationSpeed;
-	//	break;
-	//case 'k': // Rotate camera down
-	//	if (currentView == INSIDE_FRONT)
-	//		cameraPitch -= cameraRotationSpeed;
-	//	else if (currentView == THIRD_PERSON)
-	//		thirdPersonPitch -= cameraRotationSpeed;
-	//	break;
+		//case 'j': // Rotate camera left
+		//	if (currentView == INSIDE_FRONT)
+		//		cameraYaw += cameraRotationSpeed;
+		//	else if (currentView == THIRD_PERSON)
+		//		thirdPersonYaw += cameraRotationSpeed;
+		//	break;
+		//case 'l': // Rotate camera right
+		//	if (currentView == INSIDE_FRONT)
+		//		cameraYaw -= cameraRotationSpeed;
+		//	else if (currentView == THIRD_PERSON)
+		//		thirdPersonYaw -= cameraRotationSpeed;
+		//	break;
+		//case 'i': // Rotate camera up
+		//	if (currentView == INSIDE_FRONT)
+		//		cameraPitch += cameraRotationSpeed;
+		//	else if (currentView == THIRD_PERSON)
+		//		thirdPersonPitch += cameraRotationSpeed;
+		//	break;
+		//case 'k': // Rotate camera down
+		//	if (currentView == INSIDE_FRONT)
+		//		cameraPitch -= cameraRotationSpeed;
+		//	else if (currentView == THIRD_PERSON)
+		//		thirdPersonPitch -= cameraRotationSpeed;
+		//	break;
 	case 27:
 		exit(0);
 		break;

@@ -55,13 +55,15 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(OutputPath)\..;D:\GUC\Sem 7\Graphing\projectCode\Lab 7;C:\Libraries\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;C:\Libraries\glew-2.1.0\include;C:\Users\dodo2\Downloads\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;D:\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(OutputPath)\..;D:\GUC\Sem 7\Graphing\projectCode\Lab 7;C:\Libraries\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;C:\Libraries\glew-2.1.0\include;C:\Users\dodo2\Downloads\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;D:\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\include;C:\Libraries\bullet3-master\src;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
-      <AdditionalDependencies>glut32.lib;legacy_stdio_definitions.lib;glfw3.lib;glew32.lib;%(AdditionalDependencies)</AdditionalDependencies>
-      <AdditionalLibraryDirectories>$(OutputPath)\..;C:\Libraries\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022;C:\Libraries\glew-2.1.0\lib\Release\x64;C:\Users\dodo2\Downloads\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022;D:\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022</AdditionalLibraryDirectories>
+      <AdditionalDependencies>glut32.lib;legacy_stdio_definitions.lib;glfw3.lib;glew32.lib;BulletDynamics.lib
+;BulletCollision.lib;
+LinearMath.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalLibraryDirectories>$(OutputPath)\..;C:\Libraries\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022;C:\Libraries\glew-2.1.0\lib\Release\x64;C:\Users\dodo2\Downloads\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022;D:\glfw-3.4.bin.WIN64\glfw-3.4.bin.WIN64\lib-vc2022;C:\Libraries\bullet3-master\build\lib\Release</AdditionalLibraryDirectories>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
