@@ -316,10 +316,12 @@ float wheelRotationX = 0.0f;
 float wheelRotationY = 0.0f;
 
 float carSpeed = 0.0f;
-float maxSpeed = 100.0f; // Maximum speed in units per second
-float acceleration = 20.0f; // Acceleration in units per second^2
+float maxSpeed = 30.0f; // Maximum speed in units per second
+float acceleration = 3.0f; // Acceleration in units per second^2
 float deceleration = 30.0f; // Deceleration in units per second^2
 float turnSpeed = 90.0f; // Turn speed in degrees per second
+bool isAccelerating = false;
+bool isBraking = false;
 
 //=======================================================================
 // Car Motion Functions
@@ -328,8 +330,8 @@ void updateCarPosition(float deltaTime) {
 	float radians = carRotation * M_PI / 180.0;
 
 	// Update position based on current speed and rotation
-	carPosition.x -= sin(radians) * carSpeed * deltaTime;
-	carPosition.z -= cos(radians) * carSpeed * deltaTime;
+	carPosition.x += sin(radians) * carSpeed * deltaTime;
+	carPosition.z += cos(radians) * carSpeed * deltaTime;
 
 	// Update wheel rotation based on speed
 	wheelRotationX += carSpeed * 360.0f * deltaTime; // Adjust this multiplier as needed
@@ -337,12 +339,12 @@ void updateCarPosition(float deltaTime) {
 
 void handleCarControls(float deltaTime) {
 	// Accelerate
-	if (glutGetModifiers() & GLUT_KEY_UP) {
+	if (isAccelerating) {
 		carSpeed += acceleration * deltaTime;
 		if (carSpeed > maxSpeed) carSpeed = maxSpeed;
 	}
 	// Brake
-	else if (glutGetModifiers() & GLUT_KEY_DOWN) {
+	else if (isBraking) {
 		carSpeed -= deceleration * deltaTime;
 		if (carSpeed < 0) carSpeed = 0;
 	}
@@ -474,7 +476,6 @@ void updateCamera()
 		At = Vector(0, 0, 0);
 		Up = Vector(0, 1, 0);
 	}
-	printf("camera");
 	/*thirdPersonOffset.print();*/
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
@@ -597,6 +598,9 @@ void myDisplay(void)
 	int currentTime = glutGet(GLUT_ELAPSED_TIME);
 	float deltaTime = (currentTime - lastTime) / 1000.0f;
 	lastTime = currentTime;
+
+	handleCarControls(deltaTime);
+	updateCarPosition(deltaTime);
 
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -778,30 +782,30 @@ void myKeyboard(unsigned char button, int x, int y)
 	case '3':
 		currentView = THIRD_PERSON;
 		break;
-	case 'j': // Rotate camera left
-		if (currentView == INSIDE_FRONT)
-			cameraYaw += cameraRotationSpeed;
-		else if (currentView == THIRD_PERSON)
-			thirdPersonYaw += cameraRotationSpeed;
-		break;
-	case 'l': // Rotate camera right
-		if (currentView == INSIDE_FRONT)
-			cameraYaw -= cameraRotationSpeed;
-		else if (currentView == THIRD_PERSON)
-			thirdPersonYaw -= cameraRotationSpeed;
-		break;
-	case 'i': // Rotate camera up
-		if (currentView == INSIDE_FRONT)
-			cameraPitch += cameraRotationSpeed;
-		else if (currentView == THIRD_PERSON)
-			thirdPersonPitch += cameraRotationSpeed;
-		break;
-	case 'k': // Rotate camera down
-		if (currentView == INSIDE_FRONT)
-			cameraPitch -= cameraRotationSpeed;
-		else if (currentView == THIRD_PERSON)
-			thirdPersonPitch -= cameraRotationSpeed;
-		break;
+	//case 'j': // Rotate camera left
+	//	if (currentView == INSIDE_FRONT)
+	//		cameraYaw += cameraRotationSpeed;
+	//	else if (currentView == THIRD_PERSON)
+	//		thirdPersonYaw += cameraRotationSpeed;
+	//	break;
+	//case 'l': // Rotate camera right
+	//	if (currentView == INSIDE_FRONT)
+	//		cameraYaw -= cameraRotationSpeed;
+	//	else if (currentView == THIRD_PERSON)
+	//		thirdPersonYaw -= cameraRotationSpeed;
+	//	break;
+	//case 'i': // Rotate camera up
+	//	if (currentView == INSIDE_FRONT)
+	//		cameraPitch += cameraRotationSpeed;
+	//	else if (currentView == THIRD_PERSON)
+	//		thirdPersonPitch += cameraRotationSpeed;
+	//	break;
+	//case 'k': // Rotate camera down
+	//	if (currentView == INSIDE_FRONT)
+	//		cameraPitch -= cameraRotationSpeed;
+	//	else if (currentView == THIRD_PERSON)
+	//		thirdPersonPitch -= cameraRotationSpeed;
+	//	break;
 	case 27:
 		exit(0);
 		break;
@@ -823,9 +827,31 @@ void specialKeyboard(int key, int x, int y)
 		break;
 	case GLUT_KEY_UP:
 		wheelRotationX += 2.0f;
+		isAccelerating = true;
+		isBraking = false;
 		break;
 	case GLUT_KEY_DOWN:
 		wheelRotationX -= 2.0f;
+		isAccelerating = false;
+		isBraking = true;
+		break;
+	}
+	glutPostRedisplay();
+}
+
+void specialKeyboardUp(int key, int x, int y)
+{
+	switch (key)
+	{
+	case GLUT_KEY_LEFT:
+	case GLUT_KEY_RIGHT:
+		wheelRotationY = 0.0f; // Reset wheel rotation when key is released
+		break;
+	case GLUT_KEY_UP:
+		isAccelerating = false;
+		break;
+	case GLUT_KEY_DOWN:
+		isBraking = false;
 		break;
 	}
 	glutPostRedisplay();
@@ -965,8 +991,8 @@ void main(int argc, char** argv)
 	glutDisplayFunc(myDisplay);
 
 	glutKeyboardFunc(myKeyboard);
-
 	glutSpecialFunc(specialKeyboard);
+	glutSpecialUpFunc(specialKeyboardUp);
 
 
 	glutMotionFunc(myMotion);
