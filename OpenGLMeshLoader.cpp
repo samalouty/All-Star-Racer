@@ -310,13 +310,13 @@ float wheelRotationSpeed = 180.0f; // Degrees per second
 float steeringAngle = 0.0f;
 float maxSteeringAngle = 30.0f; // Maximum steering angle in degrees
 float steeringSpeed = 90.0f; // Degrees per second
-float deceleration = 5.0f; // Units per second^2
+float deceleration = 50.0f; // Units per second^2
 
 float carSpeed = 0.0f;
-float maxSpeed = 30.0f; // Maximum speed in units per second
-float acceleration = 3.0f; // Acceleration in units per second^2
+float maxSpeed = 70.0f; // Maximum speed in units per second
+float acceleration = 9.0f; // Acceleration in units per second^2
 //float deceleration = 3.0f; // Deceleration in units per second^2
-float turnSpeed = 2.0f; // Turn speed in degrees per second
+float turnSpeed = 60.0f; // Turn speed in degrees per second
 bool isAccelerating = false;
 bool isBraking = false;
 
@@ -814,18 +814,18 @@ void specialKeyboard(int key, int x, int y)
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
-		wheelRotationY += 2.0f;
+		wheelRotationY += 6.0f;
 		break;
 	case GLUT_KEY_RIGHT:
-		wheelRotationY -= 2.0f;
+		wheelRotationY -= 6.0f;
 		break;
 	case GLUT_KEY_UP:
-		wheelRotationX += 2.0f;
+		wheelRotationX += 6.0f;
 		isAccelerating = true;
 		isBraking = false;
 		break;
 	case GLUT_KEY_DOWN:
-		wheelRotationX -= 2.0f;
+		wheelRotationX -= 6.0f;
 		isAccelerating = false;
 		isBraking = true;
 		break;
@@ -969,6 +969,12 @@ void LoadAssets()
 //=======================================================================
 // Main Function
 //=======================================================================
+
+void timer(int value) {
+	glutPostRedisplay();
+	glutTimerFunc(16, timer, 0);
+}
+
 void main(int argc, char** argv)
 {
 
@@ -1005,6 +1011,11 @@ void main(int argc, char** argv)
 	glEnable(GL_COLOR_MATERIAL);
 
 	glShadeModel(GL_SMOOTH);
+
+	//glut timer 
+
+	glutTimerFunc(0, timer, 0);  // Start the timer
+
 
 	glutMainLoop();
 }
