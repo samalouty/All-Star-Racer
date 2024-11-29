@@ -306,8 +306,8 @@ float maxSpeed = 300.0f; // km/h
 float accelerationTime = 0.5f; // seconds
 float accelerationRate = maxSpeed / accelerationTime;
 bool isAccelerating = false;
-float wheelRotationX = 145.0f;
-float wheelRotationY = -100.5f;
+float wheelRotationX = 0.0f;
+float wheelRotationY = 0.0f;
 
 
 void updateCarPosition(float deltaTime) {
