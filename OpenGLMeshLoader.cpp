@@ -295,9 +295,15 @@ float thirdPersonDistance = 3.0f;
 Vector carPosition(0, 0, 0);
 float carRotation = 0; // in degrees, 0 means facing negative z-axis
 //Vector(0.2, 0.61, -0.1)
-Vector cameraOffset(0.2, 0.61, -0.1);
+Vector cameraOffset(0.2, 1.11, -0.2);
 float cameraMovementSpeed = 0.05f;
-
+float cameraYaw = 0.0f;
+float cameraPitch = 0.0f;
+float cameraRotationSpeed = 2.0f;
+float thirdPersonYaw = 0.0f;
+float thirdPersonPitch = 0.0f;
+Vector thirdPersonOffset(-0.1, 2.4, -8.7); // Initial offset behind and above the car
+float thirdPersonMovementSpeed = 0.1f;
 
 Vector carVelocity(0, 0, 0);
 float carSpeed = 0.0f; // in km/h
@@ -309,62 +315,13 @@ bool isAccelerating = false;
 float wheelRotationX = 145.0f;
 float wheelRotationY = -100.5f;
 
+float carSpeed = 0.0f;
+float maxSpeed = 100.0f; // Maximum speed in units per second
+float acceleration = 20.0f; // Acceleration in units per second^2
+float deceleration = 30.0f; // Deceleration in units per second^2
+float turnSpeed = 90.0f; // Turn speed in degrees per second
 
-void updateCarPosition(float deltaTime) {
-	// Convert speed from km/h to units per frame
-	float speedPerFrame = (carSpeed / 3600.0f) * deltaTime;
 
-	// Update car position based on its rotation and speed
-	float radians = carRotation * M_PI / 180.0;
-	carPosition.x -= sin(radians) * speedPerFrame;
-	carPosition.z -= cos(radians) * speedPerFrame;
-	//Vector(-0.05, 0.51, 0.15)
-	// Update camera position in first-person view
-	if (currentView == INSIDE_FRONT) {
-		Eye = Vector(
-			carPosition.x + cameraOffset.x * cos(radians) - cameraOffset.z * sin(radians),
-			carPosition.y + cameraOffset.y + 10000,
-			carPosition.z + cameraOffset.x * sin(radians) + cameraOffset.z * cos(radians)
-		);	
-
-		At = Vector(
-			carPosition.x + (cameraOffset.x + 1) * cos(radians) - (cameraOffset.z + 1) * sin(radians),
-			carPosition.y + cameraOffset.y,
-			carPosition.z + (cameraOffset.x + 1) * sin(radians) + (cameraOffset.z + 1) * cos(radians)
-		);
-	}
-}
-
-void updateCarSpeed(float deltaTime) {
-	if (isAccelerating && carSpeed < maxSpeed) {
-		carSpeed += accelerationRate * deltaTime;
-		if (carSpeed > maxSpeed) carSpeed = maxSpeed;
-	}
-	else if (!isAccelerating && carSpeed > 0) {
-		carSpeed -= accelerationRate * deltaTime;
-		if (carSpeed < 0) carSpeed = 0;
-	}
-}
-
-void specialKeyboard(int key, int x, int y)
-{
-	switch (key)
-	{
-	case GLUT_KEY_LEFT:
-		wheelRotationY += 2.0f;
-		break;
-	case GLUT_KEY_RIGHT:
-		wheelRotationY -= 2.0f;
-		break;
-	case GLUT_KEY_UP:
-		wheelRotationX += 2.0f;
-		break;
-	case GLUT_KEY_DOWN:
-		wheelRotationX -= 2.0f;
-		break;
-	}
-	glutPostRedisplay();
-}
 
 //=======================================================================
 // Lighting Configuration Function
@@ -402,20 +359,19 @@ void updateCamera()
 {
 	if (currentView == INSIDE_FRONT)
 	{
-		Vector lookAtOffset(0 + cameraOffset.x, 0.05 + cameraOffset.y, 0.4 + cameraOffset.z);
-
 		float radians = -(carRotation * M_PI / 180.0);
+		float yawRadians = cameraYaw * M_PI / 180.0;
+		float pitchRadians = cameraPitch * M_PI / 180.0;
+
+		// Calculate the rotated camera offset
 		Vector rotatedCameraOffset(
 			cameraOffset.x * cos(radians) - cameraOffset.z * sin(radians),
 			cameraOffset.y,
 			cameraOffset.x * sin(radians) + cameraOffset.z * cos(radians)
 		);
 
-		Vector rotatedLookAtOffset(
-			lookAtOffset.x * cos(radians) - lookAtOffset.z * sin(radians),
-			lookAtOffset.y,
-			lookAtOffset.x * sin(radians) + lookAtOffset.z * cos(radians)
-		);
+		// Apply yaw and pitch rotations
+		Vector rotatedLookAt(0.0348995, 0, 0.999391);
 
 		Eye = Vector(
 			carPosition.x + rotatedCameraOffset.x,
@@ -424,31 +380,50 @@ void updateCamera()
 		);
 
 		At = Vector(
-			carPosition.x + rotatedLookAtOffset.x,
-			carPosition.y + rotatedLookAtOffset.y,
-			carPosition.z + rotatedLookAtOffset.z
-		);
-
-		Up = Vector(-0.1, 1, 0);
-	}
-	else if (currentView == THIRD_PERSON) {
-		float radians = carRotation * M_PI / 180.0;
-
-		Eye = Vector(
-			carPosition.x - thirdPersonDistance * sin(radians),
-			carPosition.y + 2.0, // Slightly above the car
-			carPosition.z - thirdPersonDistance * cos(radians)
-		);
-
-		// Look at point is slightly ahead of the car
-		At = Vector(
-			carPosition.x - sin(radians),
-			carPosition.y + 1.0,
-			carPosition.z - cos(radians)
+			Eye.x + rotatedLookAt.x,
+			Eye.y + rotatedLookAt.y,
+			Eye.z + rotatedLookAt.z
 		);
 
 		Up = Vector(0, 1, 0);
+		/*rotatedLookAt.print();*/
 
+		/*printf("rotation, %d",carRotation);
+		printf("yaw, %d",cameraYaw);
+		printf("pitch %d", cameraPitch);*/
+	}
+	else if (currentView == THIRD_PERSON)
+	{
+		float radians = carRotation * M_PI / 180.0;
+		float yawRadians = thirdPersonYaw * M_PI / 180.0;
+		float pitchRadians = thirdPersonPitch * M_PI / 180.0;
+
+		// Calculate the rotated third-person offset
+		Vector rotatedOffset(
+			thirdPersonOffset.x * cos(radians) - thirdPersonOffset.z * sin(radians),
+			thirdPersonOffset.y,
+			thirdPersonOffset.x * sin(radians) + thirdPersonOffset.z * cos(radians)
+		);
+
+		// Calculate the camera position
+		Eye = Vector(
+			carPosition.x + rotatedOffset.x,
+			carPosition.y + rotatedOffset.y,
+			carPosition.z + rotatedOffset.z
+		);
+
+		// Calculate the rotated look-at vector
+		Vector rotatedLookAt(0.0671896, 0.766044, 0.639266);
+
+		// Calculate the look-at point
+		At = Vector(
+			carPosition.x + rotatedLookAt.x,
+			carPosition.y + rotatedLookAt.y,
+			carPosition.z + rotatedLookAt.z
+		);
+
+		Up = Vector(0, 1, 0);
+		rotatedLookAt.print();
 	}
 	else
 	{
@@ -456,11 +431,11 @@ void updateCamera()
 		At = Vector(0, 0, 0);
 		Up = Vector(0, 1, 0);
 	}
-	cameraOffset.print();
+	printf("camera");
+	thirdPersonOffset.print();
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
-
 
 //=======================================================================
 // Material Configuration Function
@@ -580,9 +555,6 @@ void myDisplay(void)
 	float deltaTime = (currentTime - lastTime) / 1000.0f;
 	lastTime = currentTime;
 
-	updateCarSpeed(deltaTime);
-	updateCarPosition(deltaTime);
-
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	updateCamera();
@@ -644,7 +616,7 @@ void myDisplay(void)
 	glPushMatrix();
 	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
 	glRotatef(carRotation, 0, 1, 0);
-	glScalef(0.5, 0.5, 0.5);
+	//glScalef(1, 1, 1);
 	glRotatef(0, 0, 1, 0);
 	carModel1.DrawModel();
 	glPopMatrix();
@@ -658,7 +630,7 @@ void myDisplay(void)
 	// Draw back left wheel
 	glPushMatrix();
 	glTranslatef(carPosition.x - wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZFront);
-	glScalef(0.5, 0.5, 0.5); 
+	//glScalef(1, 1, 1); 
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
 	glRotatef(180, 0, 1, 0);  // to face the right direction
 	redWheelsBackLeft1.DrawModel();
@@ -667,7 +639,7 @@ void myDisplay(void)
 	// Draw back right wheel
 	glPushMatrix();
 	glTranslatef(carPosition.x + wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZFront);
-	glScalef(0.5, 0.5, 0.5);
+	//glScalef(0.5, 0.5, 0.5);
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
 	glRotatef(0, 0, 1, 0);
 	redWheelsBackRight1.DrawModel();
@@ -685,7 +657,7 @@ void myDisplay(void)
 	// Draw front left wheel
 	glPushMatrix();
 	glTranslatef(carPosition.x - wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZBack);
-	glScalef(0.5, 0.5, 0.5);
+	//glScalef(0.5, 0.5, 0.5);
 	glRotatef(180 + wheelRotationY, 0, 1, 0);
 	glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
 	redWheelsFrontLeft1.DrawModel();
@@ -694,7 +666,7 @@ void myDisplay(void)
 	// Draw front right wheel
 	glPushMatrix();
 	glTranslatef(carPosition.x + wheelOffsetX, carPosition.y + wheelOffsetY, carPosition.z + wheelOffsetZBack);
-	glScalef(0.5, 0.5, 0.5);
+	//glScalef(0.5, 0.5, 0.5);
 	glRotatef(wheelRotationY,0, 1, 0);
 	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
 	redWheelsFrontRight1.DrawModel(); 
@@ -730,32 +702,30 @@ void myKeyboard(unsigned char button, int x, int y)
 {
 	switch (button)
 	{
-	case 'a':
-		if (currentView == INSIDE_FRONT)
-			cameraOffset.z -= cameraMovementSpeed;
-		else
-			glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-		break;
-	case 'd':
-		if (currentView == INSIDE_FRONT)
-			cameraOffset.z += cameraMovementSpeed;
-		break;
-	case 'e':
-		if (currentView == INSIDE_FRONT)
-			cameraOffset.x -= cameraMovementSpeed;
-		break;
-	case 'q':
-		if (currentView == INSIDE_FRONT)
-			cameraOffset.x += cameraMovementSpeed;
-		break;
-	case 'w':
-		if (currentView == INSIDE_FRONT)
-			cameraOffset.y += cameraMovementSpeed;
-		break;
-	case 's':
-		if (currentView == INSIDE_FRONT)
-			cameraOffset.y -= cameraMovementSpeed;
-		break;
+	//case 'w':
+	//	if (currentView == THIRD_PERSON)
+	//		thirdPersonOffset.y += thirdPersonMovementSpeed;
+	//	break;
+	//case 's':
+	//	if (currentView == THIRD_PERSON)
+	//		thirdPersonOffset.y -= thirdPersonMovementSpeed;
+	//	break;
+	//case 'a':
+	//	if (currentView == THIRD_PERSON)
+	//		thirdPersonOffset.x -= thirdPersonMovementSpeed;
+	//	break;
+	//case 'd':
+	//	if (currentView == THIRD_PERSON)
+	//		thirdPersonOffset.x += thirdPersonMovementSpeed;
+	//	break;
+	//case 'q':
+	//	if (currentView == THIRD_PERSON)
+	//		thirdPersonOffset.z += thirdPersonMovementSpeed;
+	//	break;
+	//case 'e':
+	//	if (currentView == THIRD_PERSON)
+	//		thirdPersonOffset.z -= thirdPersonMovementSpeed;
+	//	break;
 	case 'r':
 		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
 		break;
@@ -765,10 +735,54 @@ void myKeyboard(unsigned char button, int x, int y)
 	case '3':
 		currentView = THIRD_PERSON;
 		break;
+	case 'j': // Rotate camera left
+		if (currentView == INSIDE_FRONT)
+			cameraYaw += cameraRotationSpeed;
+		else if (currentView == THIRD_PERSON)
+			thirdPersonYaw += cameraRotationSpeed;
+		break;
+	case 'l': // Rotate camera right
+		if (currentView == INSIDE_FRONT)
+			cameraYaw -= cameraRotationSpeed;
+		else if (currentView == THIRD_PERSON)
+			thirdPersonYaw -= cameraRotationSpeed;
+		break;
+	case 'i': // Rotate camera up
+		if (currentView == INSIDE_FRONT)
+			cameraPitch += cameraRotationSpeed;
+		else if (currentView == THIRD_PERSON)
+			thirdPersonPitch += cameraRotationSpeed;
+		break;
+	case 'k': // Rotate camera down
+		if (currentView == INSIDE_FRONT)
+			cameraPitch -= cameraRotationSpeed;
+		else if (currentView == THIRD_PERSON)
+			thirdPersonPitch -= cameraRotationSpeed;
+		break;
 	case 27:
 		exit(0);
 		break;
 	default:
+		break;
+	}
+	glutPostRedisplay();
+}
+
+void specialKeyboard(int key, int x, int y)
+{
+	switch (key)
+	{
+	case GLUT_KEY_LEFT:
+		wheelRotationY += 2.0f;
+		break;
+	case GLUT_KEY_RIGHT:
+		wheelRotationY -= 2.0f;
+		break;
+	case GLUT_KEY_UP:
+		wheelRotationX += 2.0f;
+		break;
+	case GLUT_KEY_DOWN:
+		wheelRotationX -= 2.0f;
 		break;
 	}
 	glutPostRedisplay();
