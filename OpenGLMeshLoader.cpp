@@ -1849,6 +1849,14 @@ void myDisplay(void)
 //=======================================================================
 void myKeyboard(unsigned char button, int x, int y)
 {
+    if(gameOver)
+        {
+		if (button == 'r' || button == 'R')
+		{
+			resetGame();
+		}
+		return;
+	}
 	switch (button)
 	{
 	case 'w':
@@ -1877,12 +1885,7 @@ void myKeyboard(unsigned char button, int x, int y)
 		break;
     case 'r':
     case 'R':
-        if (gameOver) {
-            resetGame();
-        }
-        else {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        }
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
         break;
 	case '1':
 		currentView = INSIDE_FRONT;
@@ -1925,6 +1928,10 @@ void myKeyboard(unsigned char button, int x, int y)
 
 void specialKeyboard(int key, int x, int y)
 {
+    if (gameOver) {
+        return;
+    }
+
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
