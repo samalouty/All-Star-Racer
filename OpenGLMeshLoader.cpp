@@ -287,27 +287,30 @@ struct Nitro {
 };
 
 std::vector<Cone> cones = {
-    Cone(1.0f, 1.0f, 1.0f),
-    Cone(-1.35632, 1.0f, 65.1768),
-    Cone(108.473, 1.0f, 139.522),
-    Cone(195.703, 1.0f, 204.171),
-    Cone(278.372, 1.0f, 257.79),
-    Cone(378.248, 1.0f, 293.617),
-    Cone(420.81, 1.0f, 160.304),
-    Cone(351.948, 1.0f, 77.5647),
-    Cone(227.368, 1.0f, -155.744),
-    Cone(230.393, 1.0f, -241.257),
-    Cone(235.758, 1.0f, -376.608),
-    Cone(61.4926, 1.0f, -358.944),
-    Cone(-2.4635, 1.0f, -263.153),
-    Cone(-7.77166, 1.0f, -119.751),
-    Cone(-152.706, 1.0f, -55.6917),
-    Cone(-264.162, 1.0f, 45.1598),
-    Cone(-396.878, 1.0f, 114.803)
+    Cone(-1.35632f, 1.0f, 65.1768f),
+    Cone(108.473f, 1.0f, 139.522f),
+    Cone(195.703f, 1.0f, 204.171f),
+    Cone(278.372f, 1.0f, 257.79f),
+    Cone(378.248f, 1.0f, 293.617f),
+    Cone(420.81f, 1.0f, 160.304f),
+    Cone(351.948f, 1.0f, 77.5647f),
+    Cone(227.368f, 1.0f, -155.744f),
+    Cone(230.393f, 1.0f, -241.257f),
+    Cone(235.758f, 1.0f, -376.608f),
+    Cone(61.4926f, 1.0f, -358.944f),
+    Cone(-2.4635f, 1.0f, -263.153f),
+    Cone(-7.77166f, 1.0f, -119.751f),
+    Cone(-152.706f, 1.0f, -55.6917f),
+    Cone(-264.162f, 1.0f, 45.1598f),
+    Cone(-396.878f, 1.0f, 114.803f)
 };
 
 std::vector<Nitro> nitros = {
-
+    //Nitro(1,1,1),
+    Nitro(32.1886, 0, 113.886),
+    Nitro(407.525, 0, 153.901),
+    Nitro(228.196, 0, -276.122),
+    Nitro(228.196, 0, -276.122)
 };
 
 Vector Eye(20, 5, 20);
@@ -1444,7 +1447,6 @@ void InitLightSource() {
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 }
 
-
 void updateSunPosition(float deltaTime) {
     if (sunsetProgress < 1.0f) {
         sunsetProgress += deltaTime / sunsetDuration;
@@ -1584,7 +1586,6 @@ void updateCamera()
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
-
 
 //=======================================================================
 // Game Over Screen
@@ -1752,6 +1753,17 @@ void renderCones() {
     }
 }
 
+void renderNitros() {
+    for (const auto& nitro : nitros) {
+        glPushMatrix();
+        glTranslatef(nitro.x, nitro.y, nitro.z);
+        glScalef(0.3f, 0.3f, 0.3f);  // Adjust scale if needed
+        glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
+        nitroModel.DrawModel();
+        glPopMatrix();
+    }
+}
+
 //=======================================================================
 // Display Function
 //=======================================================================
@@ -1826,13 +1838,15 @@ void myDisplay(void)
 	gltfModel1.DrawModel();
 	glPopMatrix();
 
-    glPushMatrix();
-    glTranslatef(1, 1, 1);  // Position your model
-    glScalef(0.5, 0.5, 0.5);  // Scale if needed
-    glRotatef(180, 0, 1, 0);  // Rotate if needed
-    nitroModel.DrawModel();
-    glPopMatrix();
+    //glPushMatrix();
+    //glTranslatef(1, 1, 1);  // Position your model
+    //glScalef(0.5, 0.5, 0.5);  // Scale if needed
+    //glRotatef(180, 0, 1, 0);  // Rotate if needed
+    //nitroModel.DrawModel();
+    //glPopMatrix();
+
     renderCones();
+	renderNitros();
 
 	// Update car model position and rotation
 	glPushMatrix();
@@ -2178,7 +2192,7 @@ void LoadAssets()
         // Handle error
     }
 
-    if (!nitroModel.LoadModel("models/cone/scene.gltf")) {
+    if (!coneModel.LoadModel("models/cone/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
         // Handle error
     }
