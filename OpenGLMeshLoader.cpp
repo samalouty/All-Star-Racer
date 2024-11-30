@@ -354,7 +354,7 @@ float wheelRotationY = 0.0f;
 
 float wheelRotationSpeed = 180.0f; // Degrees per second
 float steeringAngle = 0.0f;
-float maxSteeringAngle = 30.0f; // Maximum steering angle in degrees
+float maxSteeringAngle = 52.50f; // Maximum steering angle in degrees
 float steeringSpeed = 90.0f; // Degrees per second
 float deceleration = 50.0f; // Units per second^2
 
@@ -362,7 +362,7 @@ float carSpeed = 0.0f;
 float maxSpeed = 70.0f; // Maximum speed in units per second
 float acceleration = 9.0f; // Acceleration in units per second^2
 //float deceleration = 3.0f; // Deceleration in units per second^2
-float turnSpeed = 60.0f; // Turn speed in degrees per second
+float turnSpeed = 90.0f; // Turn speed in degrees per second
 bool isAccelerating = false;
 bool isBraking = false;
 
@@ -389,8 +389,13 @@ GLfloat lightAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
 GLfloat lightDiffuse[] = { 1.0f, 1.0f, 0.9f, 1.0f };
 GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+// game over variables 
+bool gameOver = false;
+Vector lastCarPosition(0, 0, 0);
+
+
 //=======================================================================
-// Car Motion Functions
+// Collision Functions
 //=======================================================================
 struct Vertex {
     float x; // X coordinate
@@ -1331,9 +1336,12 @@ std::vector<Vertex> trackVertices = {
     {166.356232f, 0.000000f, -498.759186f},
     {155.831207f, 0.000000f, -498.928009f},
     {160.573669f, 0.000000f, -499.004852f},
+    { 0, -0.264776, 23.2566 }, 
+    { 0.316699, -0.304001, -31.0523 }, 
+    { -242.272, -0.451099, 191.192 }
 };
 
-bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 30.0f) {
+bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 25.0f) {
     // Loop through each vertex in the track
     for (const auto& vertex : trackVertices) {
         // Create a Vector for the track vertex
@@ -1367,6 +1375,10 @@ void updateCarPosition(float deltaTime) {
         std::cout << "Car position when gravity enabled: ";
         carPosition.print();
 
+        if (carPosition.y < -3.0f) {  // Adjust this value as needed
+            gameOver = true;
+            lastCarPosition = carPosition;
+        }
         
     }
 
@@ -1375,7 +1387,10 @@ void updateCarPosition(float deltaTime) {
 	carPosition.z += cos(radians) * carSpeed * deltaTime;
 
     if (isPointInTrack(trackVertices, carPosition)) {
-        //std::cout << "Car is within the track boundaries." << std::endl;
+        std::cout << "Car is within the track boundaries." << std::endl;
+
+
+
     }
     else {
         gravityEnabled = true;
@@ -1419,8 +1434,7 @@ void handleCarControls(float deltaTime) {
 //=======================================================================
 // Lighting Configuration Function
 //=======================================================================
-void InitLightSource()
-{
+void InitLightSource() {
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
 
@@ -1430,8 +1444,8 @@ void InitLightSource()
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 }
 
-void updateSunPosition(float deltaTime)
-{
+
+void updateSunPosition(float deltaTime) {
     if (sunsetProgress < 1.0f) {
         sunsetProgress += deltaTime / sunsetDuration;
         if (sunsetProgress > 1.0f) {
@@ -1448,6 +1462,7 @@ void updateSunPosition(float deltaTime)
         lightPosition[0] = sunPosition.x;
         lightPosition[1] = sunPosition.y;
         lightPosition[2] = sunPosition.z;
+        lightPosition[3] = 1.0f; // Ensure it's a positional light
         glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
         // Update light color and intensity to simulate sunset
@@ -1491,6 +1506,11 @@ void updateSunPosition(float deltaTime)
 //=======================================================================
 void updateCamera()
 {
+    if (gameOver) {
+        Eye = Vector(lastCarPosition.x, lastCarPosition.y + 5.0f, lastCarPosition.z + 10.0f);
+        At = Vector(carPosition.x, 0, carPosition.z);
+	}
+    else
     if (currentView == INSIDE_FRONT)
     {
         float carRadians = -(carRotation * M_PI / 180.0);
@@ -1528,9 +1548,9 @@ void updateCamera()
         );
 
         At = Vector(
-            Eye.x + pitchLookAt.x,
+            Eye.x + pitchLookAt.x + sin(-carRadians) * cameraLookAheadDistance,
             Eye.y + pitchLookAt.y,
-            Eye.z + pitchLookAt.z
+            Eye.z + pitchLookAt.z + cos(-carRadians) * cameraLookAheadDistance
         );
 
         Up = Vector(0, 1, 0);
@@ -1563,6 +1583,56 @@ void updateCamera()
 	/*thirdPersonOffset.print();*/
 	glLoadIdentity();
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+}
+
+
+//=======================================================================
+// Game Over Screen
+//======================================================================
+
+void resetGame() {
+    gravityEnabled = false;
+    gameOver = false;
+    carPosition = Vector(0, 0, 0);  // Reset car position
+    carRotation = 0;  // Reset car rotation
+    carSpeed = 0;  // Reset car speed
+    wheelRotationX = 0;  // Reset wheel rotation
+    wheelRotationY = 0;  // Reset wheel rotation
+    sunsetProgress = 0.0f;  // Reset sunset progress
+}
+
+void drawGameOverText() {
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, WIDTH, 0, HEIGHT);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor3f(1.0f, 0.0f, 0.0f);  // Red color for text
+    glRasterPos2i(WIDTH / 2 - 50, HEIGHT / 2);
+
+    const char* text = "Game Over";
+    for (const char* c = text; *c != '\0'; c++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+    }
+
+    glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30);
+    const char* restartText = "Press 'R' to restart";
+    for (const char* c = restartText; *c != '\0'; c++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *c);
+    }
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+
+    glEnable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
 }
 
 //=======================================================================
@@ -1626,9 +1696,7 @@ void myInit(void)
 	// Enable texturing
 	glEnable(GL_TEXTURE_2D);
 
-	// Enable lighting and material properties
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
+
 
 	// Enable depth testing
 	glEnable(GL_DEPTH_TEST);
@@ -1758,7 +1826,13 @@ void myDisplay(void)
 	gltfModel1.DrawModel();
 	glPopMatrix();
 
-	renderCones();
+    glPushMatrix();
+    glTranslatef(1, 1, 1);  // Position your model
+    glScalef(0.5, 0.5, 0.5);  // Scale if needed
+    glRotatef(180, 0, 1, 0);  // Rotate if needed
+    nitroModel.DrawModel();
+    glPopMatrix();
+    renderCones();
 
 	// Update car model position and rotation
 	glPushMatrix();
@@ -1850,6 +1924,10 @@ void myDisplay(void)
     gluDeleteQuadric(qobj);
     glPopMatrix();
 
+    if (gameOver) {
+        drawGameOverText();
+    }
+
     glutSwapBuffers();
 }
 
@@ -1858,6 +1936,14 @@ void myDisplay(void)
 //=======================================================================
 void myKeyboard(unsigned char button, int x, int y)
 {
+    if(gameOver)
+        {
+		if (button == 'r' || button == 'R')
+		{
+			resetGame();
+		}
+		return;
+	}
 	switch (button)
 	{
 	case 'w':
@@ -1884,9 +1970,10 @@ void myKeyboard(unsigned char button, int x, int y)
 		if (currentView == THIRD_PERSON)
 			thirdPersonOffset.z -= thirdPersonMovementSpeed;
 		break;
-	case 'r':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		break;
+    case 'r':
+    case 'R':
+        glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        break;
 	case '1':
 		currentView = INSIDE_FRONT;
 		break;
@@ -1928,13 +2015,17 @@ void myKeyboard(unsigned char button, int x, int y)
 
 void specialKeyboard(int key, int x, int y)
 {
+    if (gameOver) {
+        return;
+    }
+
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
-		wheelRotationY += 6.0f;
+		wheelRotationY += 15.0f;
 		break;
 	case GLUT_KEY_RIGHT:
-		wheelRotationY -= 6.0f;
+		wheelRotationY -= 15.0f;
 		break;
 	case GLUT_KEY_UP:
 		wheelRotationX += 6.0f;
@@ -2047,7 +2138,7 @@ void LoadAssets()
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
-	if (!gltfModel1.LoadModel("models/life-has-no-meaning/scene.gltf")) {
+	if (!gltfModel1.LoadModel("models/lets-a-go/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
@@ -2077,7 +2168,12 @@ void LoadAssets()
 		// Handle error
 	}
 
-    if (!coneModel.LoadModel("models/cone/scene.gltf")) {
+    //if (!coneModel.LoadModel("models/nitro2/scene.gltf")) {
+    //    std::cerr << "Failed to load GLTF model" << std::endl;
+    //    // Handle error
+    //}
+
+    if (!nitroModel.LoadModel("models/nitro2/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
         // Handle error
     }
@@ -2122,6 +2218,7 @@ void main(int argc, char** argv)
 	glutSpecialUpFunc(specialKeyboardUp);
 
 
+
 	glutMotionFunc(myMotion);
 
 	glutMouseFunc(myMouse);
@@ -2131,11 +2228,11 @@ void main(int argc, char** argv)
 	myInit();
 
 	LoadAssets();
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_NORMALIZE);
-	glEnable(GL_COLOR_MATERIAL);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_NORMALIZE);
+    glEnable(GL_COLOR_MATERIAL);
 
 	glShadeModel(GL_SMOOTH);
 

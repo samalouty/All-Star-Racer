@@ -1,0 +1,11 @@
+Model Information:
+* title:	Car Nitro Bottle
+* source:	https://sketchfab.com/3d-models/car-nitro-bottle-653db48eeaf543f3abec580e5f59fdbc
+* author:	ion.fbx (https://sketchfab.com/ionfbx)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Car Nitro Bottle" (https://sketchfab.com/3d-models/car-nitro-bottle-653db48eeaf543f3abec580e5f59fdbc) by ion.fbx (https://sketchfab.com/ionfbx) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
