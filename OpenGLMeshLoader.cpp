@@ -343,6 +343,14 @@ struct Vertex {
 };
 
 std::vector<Vertex> trackVertices = {
+    //(226.588, -0.323614, -195.544
+    {226.588000f, 0.000000f,-195.544000f},
+    {225.96f, 0.0f, -226.859f},
+    {227.348f, -0.0f, -259.895f}, 
+    {-145.995f, 0.000000f, -56.1945f},
+    {-1.67728f,0.000000f, -244.87f},
+    {-1.04471f, 0.000000f, -213.832f},
+    {-145.173f, 0.000000f, 111.069f},
     {370.865387f, 0.000000f, 308.835236f},
     {363.090759f, 0.000000f, 308.714722f},
     {378.469482f, 0.000000f, 308.272522f},
@@ -1295,6 +1303,12 @@ void updateCarPosition(float deltaTime) {
 	float radians = carRotation * M_PI / 180.0;
     if (gravityEnabled) {
         carPosition.y -= 9.8065 * deltaTime;
+        //print car position gravity is enabled at 
+
+        std::cout << "Car position when gravity enabled: ";
+        carPosition.print();
+
+        
     }
 
 	// Update position based on current speed and rotation
@@ -1377,42 +1391,52 @@ void InitLightSource()
 //=======================================================================
 void updateCamera()
 {
-	if (currentView == INSIDE_FRONT)
-	{
-		float radians = -(carRotation * M_PI / 180.0);
-		float yawRadians = cameraYaw * M_PI / 180.0;
-		float pitchRadians = cameraPitch * M_PI / 180.0;
+    if (currentView == INSIDE_FRONT)
+    {
+        float carRadians = -(carRotation * M_PI / 180.0);
+        float yawRadians = cameraYaw * M_PI / 180.0;
+        float pitchRadians = cameraPitch * M_PI / 180.0;
 
-		// Calculate the rotated camera offset
-		Vector rotatedCameraOffset(
-			cameraOffset.x * cos(radians) - cameraOffset.z * sin(radians),
-			cameraOffset.y,
-			cameraOffset.x * sin(radians) + cameraOffset.z * cos(radians)
-		);
+        // Calculate the rotated camera offset using car's rotation
+        Vector rotatedCameraOffset(
+            cameraOffset.x * cos(carRadians) - cameraOffset.z * sin(carRadians),
+            cameraOffset.y,
+            cameraOffset.x * sin(carRadians) + cameraOffset.z * cos(carRadians)
+        );
 
-		// Apply yaw and pitch rotations
-		Vector rotatedLookAt(0.0348995, 0, 0.999391);
+        // Apply yaw and pitch rotations to the look-at vector
+        Vector lookAt(0.0348995, 0, 0.999391);
 
-		Eye = Vector(
-			carPosition.x + rotatedCameraOffset.x,
-			carPosition.y + rotatedCameraOffset.y,
-			carPosition.z + rotatedCameraOffset.z
-		);
+        // Apply yaw rotation
+        Vector yawLookAt(
+            lookAt.x * cos(yawRadians) - lookAt.z * sin(yawRadians),
+            lookAt.y,
+            lookAt.x * sin(yawRadians) + lookAt.z * cos(yawRadians)
+        );
 
-		At = Vector(
-			Eye.x + rotatedLookAt.x,
-			Eye.y + rotatedLookAt.y,
-			Eye.z + rotatedLookAt.z
-		);
+        // Apply pitch rotation
+        Vector pitchLookAt(
+            yawLookAt.x,
+            yawLookAt.y * cos(pitchRadians) - yawLookAt.z * sin(pitchRadians),
+            yawLookAt.y * sin(pitchRadians) + yawLookAt.z * cos(pitchRadians)
+        );
 
-		Up = Vector(0, 1, 0);
-		/*rotatedLookAt.print();*/
+        Eye = Vector(
+            carPosition.x + rotatedCameraOffset.x,
+            carPosition.y + rotatedCameraOffset.y,
+            carPosition.z + rotatedCameraOffset.z
+        );
 
-		/*printf("rotation, %d",carRotation);
-		printf("yaw, %d",cameraYaw);
-		printf("pitch %d", cameraPitch);*/
-	}
-	else if (currentView == THIRD_PERSON)
+        At = Vector(
+            Eye.x + pitchLookAt.x,
+            Eye.y + pitchLookAt.y,
+            Eye.z + pitchLookAt.z
+        );
+
+        Up = Vector(0, 1, 0);
+    }
+
+    else if (currentView == THIRD_PERSON)
 	{
 		float radians = carRotation * M_PI / 180.0;
 		
