@@ -349,8 +349,13 @@ GLfloat lightAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
 GLfloat lightDiffuse[] = { 1.0f, 1.0f, 0.9f, 1.0f };
 GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+// game over variables 
+bool gameOver = false;
+Vector lastCarPosition(0, 0, 0);
+
+
 //=======================================================================
-// Car Motion Functions
+// Collision Functions
 //=======================================================================
 struct Vertex {
     float x; // X coordinate
@@ -1330,6 +1335,10 @@ void updateCarPosition(float deltaTime) {
         std::cout << "Car position when gravity enabled: ";
         carPosition.print();
 
+        if (carPosition.y < -3.0f) {  // Adjust this value as needed
+            gameOver = true;
+            lastCarPosition = carPosition;
+        }
         
     }
 
@@ -1339,6 +1348,9 @@ void updateCarPosition(float deltaTime) {
 
     if (isPointInTrack(trackVertices, carPosition)) {
         std::cout << "Car is within the track boundaries." << std::endl;
+
+
+
     }
     else {
         gravityEnabled = true;
@@ -1382,8 +1394,7 @@ void handleCarControls(float deltaTime) {
 //=======================================================================
 // Lighting Configuration Function
 //=======================================================================
-void InitLightSource()
-{
+void InitLightSource() {
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
 
@@ -1393,8 +1404,8 @@ void InitLightSource()
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 }
 
-void updateSunPosition(float deltaTime)
-{
+
+void updateSunPosition(float deltaTime) {
     if (sunsetProgress < 1.0f) {
         sunsetProgress += deltaTime / sunsetDuration;
         if (sunsetProgress > 1.0f) {
@@ -1411,6 +1422,7 @@ void updateSunPosition(float deltaTime)
         lightPosition[0] = sunPosition.x;
         lightPosition[1] = sunPosition.y;
         lightPosition[2] = sunPosition.z;
+        lightPosition[3] = 1.0f; // Ensure it's a positional light
         glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 
         // Update light color and intensity to simulate sunset
@@ -1454,6 +1466,11 @@ void updateSunPosition(float deltaTime)
 //=======================================================================
 void updateCamera()
 {
+    if (gameOver) {
+        Eye = Vector(lastCarPosition.x, lastCarPosition.y + 5.0f, lastCarPosition.z + 10.0f);
+        At = Vector(carPosition.x, 0, carPosition.z);
+	}
+    else
     if (currentView == INSIDE_FRONT)
     {
         float carRadians = -(carRotation * M_PI / 180.0);
@@ -1528,6 +1545,56 @@ void updateCamera()
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
 
+
+//=======================================================================
+// Game Over Screen
+//======================================================================
+
+void resetGame() {
+    gravityEnabled = false;
+    gameOver = false;
+    carPosition = Vector(0, 0, 0);  // Reset car position
+    carRotation = 0;  // Reset car rotation
+    carSpeed = 0;  // Reset car speed
+    wheelRotationX = 0;  // Reset wheel rotation
+    wheelRotationY = 0;  // Reset wheel rotation
+    sunsetProgress = 0.0f;  // Reset sunset progress
+}
+
+void drawGameOverText() {
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, WIDTH, 0, HEIGHT);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glColor3f(1.0f, 0.0f, 0.0f);  // Red color for text
+    glRasterPos2i(WIDTH / 2 - 50, HEIGHT / 2);
+
+    const char* text = "Game Over";
+    for (const char* c = text; *c != '\0'; c++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+    }
+
+    glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30);
+    const char* restartText = "Press 'R' to restart";
+    for (const char* c = restartText; *c != '\0'; c++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *c);
+    }
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+
+    glEnable(GL_LIGHTING);
+    glEnable(GL_TEXTURE_2D);
+}
+
 //=======================================================================
 // Material Configuration Function
 //======================================================================
@@ -1589,9 +1656,7 @@ void myInit(void)
 	// Enable texturing
 	glEnable(GL_TEXTURE_2D);
 
-	// Enable lighting and material properties
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
+
 
 	// Enable depth testing
 	glEnable(GL_DEPTH_TEST);
@@ -1602,38 +1667,6 @@ void myInit(void)
 	// Enable color material
 	glEnable(GL_COLOR_MATERIAL);
 	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
-}
-
-//=======================================================================
-// Render Ground Function
-//=======================================================================
-void RenderGround()
-{
-	glDisable(GL_LIGHTING);	// Disable lighting 
-
-	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
-
-	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
-
-	glBindTexture(GL_TEXTURE_2D, tex_ground.texture[0]);	// Bind the ground texture
-
-	glPushMatrix();
-	glBegin(GL_QUADS);
-	glNormal3f(0, 1, 0);	// Set quad normal direction.
-	glTexCoord2f(0, 0);		// Set tex coordinates ( Using (0,0) -> (5,5) with texture wrapping set to GL_REPEAT to simulate the ground repeated grass texture).
-	glVertex3f(-20, 0, -20);
-	glTexCoord2f(5, 0);
-	glVertex3f(20, 0, -20);
-	glTexCoord2f(5, 5);
-	glVertex3f(20, 0, 20);
-	glTexCoord2f(0, 5);
-	glVertex3f(-20, 0, 20);
-	glEnd();
-	glPopMatrix();
-
-	glEnable(GL_LIGHTING);	// Enable lighting again for other entites coming throung the pipeline.
-
-	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
 }
 
 //=======================================================================
@@ -1708,12 +1741,11 @@ void myDisplay(void)
 	gltfModel1.DrawModel();
 	glPopMatrix();
 
-    glPushMatrix();
-    glTranslatef(1, 1, 1);  // Position your model
-    glScalef(1, 1, 1);  // Scale if needed
-    glRotatef(90, 0, 1, 0);  // Rotate if needed
-    coneModel.DrawModel();
-    glPopMatrix();
+    //glPushMatrix();
+    //glTranslatef(1, 1, 1);  // Position your model
+    //glScalef(1, 1, 1);  // Scale if needed
+    //coneModel.DrawModel();
+    //glPopMatrix();
 
 	// Update car model position and rotation
 	glPushMatrix();
@@ -1789,7 +1821,6 @@ void myDisplay(void)
         glDisable(GL_LIGHTING);
         glColor4f(sunColor.r, sunColor.g, sunColor.b, sunVisibility);
         glutSolidSphere(5.0, 20, 20);
-        glEnable(GL_LIGHTING);
         glPopMatrix();
     }
 
@@ -1805,6 +1836,10 @@ void myDisplay(void)
     gluSphere(qobj, 1000, 100, 100);
     gluDeleteQuadric(qobj);
     glPopMatrix();
+
+    if (gameOver) {
+        drawGameOverText();
+    }
 
     glutSwapBuffers();
 }
@@ -1840,9 +1875,15 @@ void myKeyboard(unsigned char button, int x, int y)
 		if (currentView == THIRD_PERSON)
 			thirdPersonOffset.z -= thirdPersonMovementSpeed;
 		break;
-	case 'r':
-		glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-		break;
+    case 'r':
+    case 'R':
+        if (gameOver) {
+            resetGame();
+        }
+        else {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        }
+        break;
 	case '1':
 		currentView = INSIDE_FRONT;
 		break;
@@ -2033,10 +2074,10 @@ void LoadAssets()
 		// Handle error
 	}
 
-    if (!coneModel.LoadModel("models/cone/scene.gltf")) {
-        std::cerr << "Failed to load GLTF model" << std::endl;
-        // Handle error
-    }
+    //if (!coneModel.LoadModel("models/cone/scene.gltf")) {
+    //    std::cerr << "Failed to load GLTF model" << std::endl;
+    //    // Handle error
+    //}
 
 	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
 
@@ -2073,6 +2114,7 @@ void main(int argc, char** argv)
 	glutSpecialUpFunc(specialKeyboardUp);
 
 
+
 	glutMotionFunc(myMotion);
 
 	glutMouseFunc(myMouse);
@@ -2082,11 +2124,11 @@ void main(int argc, char** argv)
 	myInit();
 
 	LoadAssets();
-	glEnable(GL_DEPTH_TEST);
-	glEnable(GL_LIGHTING);
-	glEnable(GL_LIGHT0);
-	glEnable(GL_NORMALIZE);
-	glEnable(GL_COLOR_MATERIAL);
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
+    glEnable(GL_NORMALIZE);
+    glEnable(GL_COLOR_MATERIAL);
 
 	glShadeModel(GL_SMOOTH);
 
