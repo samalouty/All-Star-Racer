@@ -250,6 +250,7 @@ private:
 
 GLTFModel gltfModel1;
 GLTFModel carModel1;
+GLTFModel coneModel;
 GLTFModel redWheelsFrontLeft1;
 GLTFModel redWheelsFrontRight1;
 GLTFModel redWheelsBackLeft1;
@@ -328,6 +329,25 @@ bool isBraking = false;
 float cameraDistance = 8.0f; // Distance behind the car
 float cameraHeight = 3.0f; // Height above the car
 float cameraLookAheadDistance = 10.0f; // How far ahead of the car to look
+
+float sunsetProgress = 0.0f;
+const float sunsetDuration = 120.0f; // 2 minutes in seconds
+glm::vec3 morningSkyColor(0.678f, 0.847f, 0.902f); // Bright morning sky blue
+glm::vec3 noonSkyColor(0.529f, 0.808f, 0.922f); // Noon sky blue
+glm::vec3 sunsetSkyColor(0.698f, 0.502f, 0.569f); // Purplish pink sunset
+glm::vec3 nightSkyColor(0.1f, 0.1f, 0.2f); // Dark blue night sky
+glm::vec3 currentSkyColor = morningSkyColor;
+
+// Sun variables
+glm::vec3 sunPosition(100.0f, 10.0f, 0.0f); // Start slightly above horizon
+glm::vec3 sunColor(1.0f, 1.0f, 0.9f); // Bright white-yellow for morning
+float sunVisibility = 1.0f; // Full visibility at start
+
+// Modified light variables
+GLfloat lightPosition[] = { 100.0f, 10.0f, 0.0f, 1.0f };
+GLfloat lightAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
+GLfloat lightDiffuse[] = { 1.0f, 1.0f, 0.9f, 1.0f };
+GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
 //=======================================================================
 // Car Motion Functions
@@ -1298,7 +1318,6 @@ bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carP
 //=======================================================================
 bool gravityEnabled = false;
 
-
 void updateCarPosition(float deltaTime) {
 	float radians = carRotation * M_PI / 180.0;
     if (gravityEnabled) {
@@ -1362,28 +1381,69 @@ void handleCarControls(float deltaTime) {
 //=======================================================================
 void InitLightSource()
 {
-	// Enable Lighting for this OpenGL Program
-	glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
 
-	// Enable Light Source number 0
-	// OpengL has 8 light sources
-	glEnable(GL_LIGHT0);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+}
 
-	// Define Light source 0 ambient light
-	GLfloat ambient[] = { 0.1f, 0.1f, 0.1, 1.0f };
-	glLightfv(GL_LIGHT0, GL_AMBIENT, ambient);
+void updateSunPosition(float deltaTime)
+{
+    if (sunsetProgress < 1.0f) {
+        sunsetProgress += deltaTime / sunsetDuration;
+        if (sunsetProgress > 1.0f) {
+            sunsetProgress = 1.0f; // Clamp to 1.0 to stop the sunset
+        }
 
-	// Define Light source 0 diffuse light
-	GLfloat diffuse[] = { 0.5f, 0.5f, 0.5f, 1.0f };
-	glLightfv(GL_LIGHT0, GL_DIFFUSE, diffuse);
+        float angle = sunsetProgress * M_PI;
 
-	// Define Light source 0 Specular light
-	GLfloat specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glLightfv(GL_LIGHT0, GL_SPECULAR, specular);
+        // Update sun position (arc from east to west)
+        sunPosition.x = 100.0f * cosf(angle);
+        sunPosition.y = 100.0f * sinf(angle) + 10.0f; // Add 10 to keep sun above horizon initially
 
-	// Finally, define light source 0 position in World Space
-	GLfloat light_position[] = { 0.0f, 10.0f, 0.0f, 1.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+        // Update light position to match sun
+        lightPosition[0] = sunPosition.x;
+        lightPosition[1] = sunPosition.y;
+        lightPosition[2] = sunPosition.z;
+        glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+
+        // Update light color and intensity to simulate sunset
+        float intensity = 1.0f - 0.7f * sunsetProgress; // Gradually reduce intensity
+        float r = 1.0f;
+        float g = 1.0f - 0.4f * sunsetProgress;
+        float b = 0.9f - 0.6f * sunsetProgress;
+
+        lightDiffuse[0] = r * intensity;
+        lightDiffuse[1] = g * intensity;
+        lightDiffuse[2] = b * intensity;
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+
+        lightAmbient[0] = r * 0.3f * intensity;
+        lightAmbient[1] = g * 0.3f * intensity;
+        lightAmbient[2] = b * 0.3f * intensity;
+        glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+
+        // Update sky color
+        glm::vec3 midSkyColor;
+        if (sunsetProgress < 0.5f) {
+            // First half: transition from morning to noon
+            midSkyColor = glm::mix(morningSkyColor, noonSkyColor, sunsetProgress * 2);
+        }
+        else {
+            // Second half: transition from noon to sunset, then to night
+            float t = (sunsetProgress - 0.5f) * 2;
+            midSkyColor = glm::mix(noonSkyColor, sunsetSkyColor, t);
+            midSkyColor = glm::mix(midSkyColor, nightSkyColor, std::max(0.0f, t - 0.5f) * 2);
+        }
+        currentSkyColor = midSkyColor;
+
+        // Update sun color and visibility
+        sunColor = glm::vec3(r, g, b);
+        sunVisibility = std::max(0.0f, 1.0f - (sunsetProgress - 0.8f) * 5.0f); // Sun starts to disappear at 80% of sunset
+    }
 }
 
 //=======================================================================
@@ -1585,15 +1645,17 @@ void myDisplay(void)
 
 	handleCarControls(deltaTime);
 	updateCarPosition(deltaTime);
+    updateSunPosition(deltaTime);
 
-	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-	updateCamera();
+    updateCamera();
 
-	GLfloat lightIntensity[] = { 0.7, 0.7, 0.7, 1.0f };
-	GLfloat lightPosition[] = { 0.0f, 100.0f, 0.0f, 0.0f };
-	glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-	glLightfv(GL_LIGHT0, GL_AMBIENT, lightIntensity);
+    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+
 
 	//// Draw Ground
 	//RenderGround();
@@ -1642,6 +1704,13 @@ void myDisplay(void)
 	glRotatef(90, 0, 1, 0);  // Rotate if needed
 	gltfModel1.DrawModel();
 	glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(1, 1, 1);  // Position your model
+    glScalef(1, 1, 1);  // Scale if needed
+    glRotatef(90, 0, 1, 0);  // Rotate if needed
+    coneModel.DrawModel();
+    glPopMatrix();
 
 	// Update car model position and rotation
 	glPushMatrix();
@@ -1711,27 +1780,30 @@ void myDisplay(void)
 	redWheelsFrontRight1.DrawModel(); 
 	glPopMatrix();
 
+    if (sunVisibility > 0.0f) {
+        glPushMatrix();
+        glTranslatef(sunPosition.x, sunPosition.y, sunPosition.z);
+        glDisable(GL_LIGHTING);
+        glColor4f(sunColor.r, sunColor.g, sunColor.b, sunVisibility);
+        glutSolidSphere(5.0, 20, 20);
+        glEnable(GL_LIGHTING);
+        glPopMatrix();
+    }
 
+    // Draw skybox
+    glPushMatrix();
+    GLUquadricObj* qobj;
+    qobj = gluNewQuadric();
+    glTranslated(50, 0, 0);
+    glRotated(90, 1, 0, 1);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    gluQuadricTexture(qobj, true);
+    gluQuadricNormals(qobj, GL_SMOOTH);
+    gluSphere(qobj, 1000, 100, 100);
+    gluDeleteQuadric(qobj);
+    glPopMatrix();
 
-	//sky box
-	glPushMatrix();
-
-	GLUquadricObj* qobj;
-	qobj = gluNewQuadric();
-	glTranslated(50, 0, 0);
-	glRotated(90, 1, 0, 1);
-	glBindTexture(GL_TEXTURE_2D, tex);
-	gluQuadricTexture(qobj, true);
-	gluQuadricNormals(qobj, GL_SMOOTH);
-	gluSphere(qobj, 1000, 100, 100);
-	gluDeleteQuadric(qobj);
-
-
-	glPopMatrix();
-
-
-
-	glutSwapBuffers();
+    glutSwapBuffers();
 }
 
 //=======================================================================
@@ -1957,6 +2029,11 @@ void LoadAssets()
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
+
+    if (!coneModel.LoadModel("models/cone/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
 
 	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
 
