@@ -251,6 +251,7 @@ private:
 GLTFModel gltfModel1;
 GLTFModel carModel1;
 GLTFModel coneModel;
+GLTFModel nitroModel;
 GLTFModel redWheelsFrontLeft1;
 GLTFModel redWheelsFrontRight1;
 GLTFModel redWheelsBackLeft1;
@@ -269,6 +270,45 @@ GLdouble zNear = 0.1;
 GLdouble zFar = 10000;
 
 
+struct Cone {
+    float x;
+    float y;
+    float z;
+
+    Cone(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+};
+
+struct Nitro {
+    float x;
+    float y;
+    float z;
+
+    Nitro(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+};
+
+std::vector<Cone> cones = {
+    Cone(1.0f, 1.0f, 1.0f),
+    Cone(-1.35632, 1.0f, 65.1768),
+    Cone(108.473, 1.0f, 139.522),
+    Cone(195.703, 1.0f, 204.171),
+    Cone(278.372, 1.0f, 257.79),
+    Cone(378.248, 1.0f, 293.617),
+    Cone(420.81, 1.0f, 160.304),
+    Cone(351.948, 1.0f, 77.5647),
+    Cone(227.368, 1.0f, -155.744),
+    Cone(230.393, 1.0f, -241.257),
+    Cone(235.758, 1.0f, -376.608),
+    Cone(61.4926, 1.0f, -358.944),
+    Cone(-2.4635, 1.0f, -263.153),
+    Cone(-7.77166, 0, -119.751),
+    Cone(-152.706, 0, -55.6917),
+    Cone(-264.162, 0, 45.1598),
+    Cone(-396.878, 0, 114.803)
+};
+
+std::vector<Nitro> nitros = {
+
+};
 
 Vector Eye(20, 5, 20);
 Vector At(0, 0, 0);
@@ -1335,7 +1375,7 @@ void updateCarPosition(float deltaTime) {
 	carPosition.z += cos(radians) * carSpeed * deltaTime;
 
     if (isPointInTrack(trackVertices, carPosition)) {
-        std::cout << "Car is within the track boundaries." << std::endl;
+        //std::cout << "Car is within the track boundaries." << std::endl;
     }
     else {
         gravityEnabled = true;
@@ -1602,7 +1642,7 @@ void myInit(void)
 }
 
 //=======================================================================
-// Render Ground Function
+// Render Functions
 //=======================================================================
 void RenderGround()
 {
@@ -1633,6 +1673,17 @@ void RenderGround()
 	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
 }
 
+void renderCones() {
+    for (const auto& cone : cones) {
+        glPushMatrix();
+        glTranslatef(cone.x, cone.y, cone.z);
+        glScalef(1.0f, 1.0f, 1.0f);  // Adjust scale if needed
+        glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
+        coneModel.DrawModel();
+        glPopMatrix();
+    }
+}
+
 //=======================================================================
 // Display Function
 //=======================================================================
@@ -1646,6 +1697,8 @@ void myDisplay(void)
 	handleCarControls(deltaTime);
 	updateCarPosition(deltaTime);
     updateSunPosition(deltaTime);
+
+	carPosition.print();
 
     glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -1705,12 +1758,7 @@ void myDisplay(void)
 	gltfModel1.DrawModel();
 	glPopMatrix();
 
-    glPushMatrix();
-    glTranslatef(1, 1, 1);  // Position your model
-    glScalef(1, 1, 1);  // Scale if needed
-    glRotatef(90, 0, 1, 0);  // Rotate if needed
-    coneModel.DrawModel();
-    glPopMatrix();
+	renderCones();
 
 	// Update car model position and rotation
 	glPushMatrix();
@@ -1785,7 +1833,6 @@ void myDisplay(void)
         glTranslatef(sunPosition.x, sunPosition.y, sunPosition.z);
         glDisable(GL_LIGHTING);
         glColor4f(sunColor.r, sunColor.g, sunColor.b, sunVisibility);
-        glutSolidSphere(5.0, 20, 20);
         glEnable(GL_LIGHTING);
         glPopMatrix();
     }
@@ -2031,6 +2078,11 @@ void LoadAssets()
 	}
 
     if (!coneModel.LoadModel("models/cone/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!nitroModel.LoadModel("models/cone/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
         // Handle error
     }
