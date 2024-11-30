@@ -251,6 +251,7 @@ private:
 GLTFModel gltfModel1;
 GLTFModel carModel1;
 GLTFModel coneModel;
+GLTFModel nitroModel;
 GLTFModel redWheelsFrontLeft1;
 GLTFModel redWheelsFrontRight1;
 GLTFModel redWheelsBackLeft1;
@@ -1741,11 +1742,12 @@ void myDisplay(void)
 	gltfModel1.DrawModel();
 	glPopMatrix();
 
-    //glPushMatrix();
-    //glTranslatef(1, 1, 1);  // Position your model
-    //glScalef(1, 1, 1);  // Scale if needed
-    //coneModel.DrawModel();
-    //glPopMatrix();
+    glPushMatrix();
+    glTranslatef(1, 1, 1);  // Position your model
+    glScalef(0.5, 0.5, 0.5);  // Scale if needed
+    glRotatef(180, 0, 1, 0);  // Rotate if needed
+    nitroModel.DrawModel();
+    glPopMatrix();
 
 	// Update car model position and rotation
 	glPushMatrix();
@@ -2081,10 +2083,15 @@ void LoadAssets()
 		// Handle error
 	}
 
-    //if (!coneModel.LoadModel("models/cone/scene.gltf")) {
+    //if (!coneModel.LoadModel("models/nitro2/scene.gltf")) {
     //    std::cerr << "Failed to load GLTF model" << std::endl;
     //    // Handle error
     //}
+
+    if (!nitroModel.LoadModel("models/nitro2/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
 
 	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
 
