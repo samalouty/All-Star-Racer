@@ -314,7 +314,7 @@ float wheelRotationY = 0.0f;
 
 float wheelRotationSpeed = 180.0f; // Degrees per second
 float steeringAngle = 0.0f;
-float maxSteeringAngle = 30.0f; // Maximum steering angle in degrees
+float maxSteeringAngle = 52.50f; // Maximum steering angle in degrees
 float steeringSpeed = 90.0f; // Degrees per second
 float deceleration = 50.0f; // Units per second^2
 
@@ -322,7 +322,7 @@ float carSpeed = 0.0f;
 float maxSpeed = 70.0f; // Maximum speed in units per second
 float acceleration = 9.0f; // Acceleration in units per second^2
 //float deceleration = 3.0f; // Deceleration in units per second^2
-float turnSpeed = 60.0f; // Turn speed in degrees per second
+float turnSpeed = 90.0f; // Turn speed in degrees per second
 bool isAccelerating = false;
 bool isBraking = false;
 
@@ -1291,9 +1291,12 @@ std::vector<Vertex> trackVertices = {
     {166.356232f, 0.000000f, -498.759186f},
     {155.831207f, 0.000000f, -498.928009f},
     {160.573669f, 0.000000f, -499.004852f},
+    { 0, -0.264776, 23.2566 }, 
+    { 0.316699, -0.304001, -31.0523 }, 
+    { -242.272, -0.451099, 191.192 }
 };
 
-bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 30.0f) {
+bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 25.0f) {
     // Loop through each vertex in the track
     for (const auto& vertex : trackVertices) {
         // Create a Vector for the track vertex
@@ -1488,9 +1491,9 @@ void updateCamera()
         );
 
         At = Vector(
-            Eye.x + pitchLookAt.x,
+            Eye.x + pitchLookAt.x + sin(-carRadians) * cameraLookAheadDistance,
             Eye.y + pitchLookAt.y,
-            Eye.z + pitchLookAt.z
+            Eye.z + pitchLookAt.z + cos(-carRadians) * cameraLookAheadDistance
         );
 
         Up = Vector(0, 1, 0);
@@ -1884,10 +1887,10 @@ void specialKeyboard(int key, int x, int y)
 	switch (key)
 	{
 	case GLUT_KEY_LEFT:
-		wheelRotationY += 6.0f;
+		wheelRotationY += 15.0f;
 		break;
 	case GLUT_KEY_RIGHT:
-		wheelRotationY -= 6.0f;
+		wheelRotationY -= 15.0f;
 		break;
 	case GLUT_KEY_UP:
 		wheelRotationX += 6.0f;
@@ -2000,7 +2003,7 @@ void LoadAssets()
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
-	if (!gltfModel1.LoadModel("models/life-has-no-meaning/scene.gltf")) {
+	if (!gltfModel1.LoadModel("models/lets-a-go/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
