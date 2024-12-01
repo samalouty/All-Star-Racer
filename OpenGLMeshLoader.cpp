@@ -2203,7 +2203,7 @@ void LoadAssets()
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
-	if (!gltfModel1.LoadModel("models/lets-a-go/scene.gltf")) {
+	if (!gltfModel1.LoadModel("models/track3/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
