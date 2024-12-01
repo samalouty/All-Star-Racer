@@ -420,6 +420,10 @@ struct Vertex {
 
 std::vector<Vertex> trackVertices = {
     //(226.588, -0.323614, -195.544
+    {65.539, -0.637422, 132.655},
+    {-152.349, -0.598197, 90.8568},
+    {2.16099, -0.519744, -79.0503}, 
+    {-58.844, -0.441293, 86.5857},
     {226.588000f, 0.000000f,-195.544000f},
     {225.96f, 0.0f, -226.859f},
     {227.348f, -0.0f, -259.895f}, 
@@ -1353,7 +1357,7 @@ std::vector<Vertex> trackVertices = {
     { -166.405, -0.833553, -56.9069 }
 };
 
-bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 25.0f) {
+bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 20.0f) {
     // Loop through each vertex in the track
     for (const auto& vertex : trackVertices) {
         // Create a Vector for the track vertex
@@ -1404,8 +1408,8 @@ void updateCarPosition(float deltaTime) {
     carPosition.z += cos(radians) * carSpeed * deltaTime;
 
     if (isPointInTrack(trackVertices, carPosition)) {
-        std::cout << "Car is within the track boundaries." << std::endl;
-        gravityEnabled = false;
+        //std::cout << "Car Pos:." << std::endl;
+        //carPosition.print();
     }
     else {
         gravityEnabled = true;
