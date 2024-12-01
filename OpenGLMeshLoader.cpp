@@ -282,8 +282,9 @@ struct Nitro {
     float x;
     float y;
     float z;
+    float animationPhase;
 
-    Nitro(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+    Nitro(float _x, float _y, float _z, float _animationPhase) : x(_x), y(_y), z(_z), animationPhase(_animationPhase) {}
 };
 
 std::vector<Cone> cones = {
@@ -307,10 +308,10 @@ std::vector<Cone> cones = {
 
 std::vector<Nitro> nitros = {
     //Nitro(1,1,1),
-    Nitro(32.1886, 1, 113.886),
-    Nitro(407.525, 1, 153.901),
-    Nitro(228.196, 1, -276.122),
-    Nitro(228.196, 1, -276.122)
+    Nitro(32.1886, 1.5, 113.886, 0.0),
+    Nitro(407.525, 1.5, 153.901, 0.0),
+    Nitro(228.196, 1.5, -276.122, 0.0),
+    Nitro(228.196, 1.5, -276.122, 0.0)
 };
 
 Vector Eye(20, 5, 20);
@@ -1447,6 +1448,16 @@ void InitLightSource() {
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
 }
 
+void updateNitroAnimation() {
+    for (auto& nitro : nitros) {
+        nitro.animationPhase += 0.5f;
+        if (nitro.animationPhase > 360.0f) {
+            nitro.animationPhase -= 360.0f;
+        }
+        nitro.y = nitro.y + sin(nitro.animationPhase) * 0.08f;
+    }
+}
+
 void updateSunPosition(float deltaTime) {
     if (sunsetProgress < 1.0f) {
         sunsetProgress += deltaTime / sunsetDuration;
@@ -1755,10 +1766,13 @@ void renderCones() {
 
 void renderNitros() {
     for (const auto& nitro : nitros) {
+        float rotation = -nitro.animationPhase * 45;
+
         glPushMatrix();
         glTranslatef(nitro.x, nitro.y, nitro.z);
-        glScalef(0.3f, 0.3f, 0.3f);  // Adjust scale if needed
-        glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
+        glScalef(0.2f, 0.2f, 0.2f);  // Adjust scale if needed
+        glRotatef(20, 1, 0, 0);
+        glRotatef(rotation, 0, 1, 0);   // Adjust rotation if needed
         nitroModel.DrawModel();
         glPopMatrix();
     }
@@ -1777,6 +1791,7 @@ void myDisplay(void)
 	handleCarControls(deltaTime);
 	updateCarPosition(deltaTime);
     updateSunPosition(deltaTime);
+    updateNitroAnimation();
 
 	carPosition.print();
 
