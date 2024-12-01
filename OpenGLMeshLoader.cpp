@@ -1394,7 +1394,7 @@ void updateCarPosition(float deltaTime) {
         std::cout << "Car position when gravity enabled: ";
         carPosition.print();
 
-        if (carPosition.y < -3.0f) {
+        if (carPosition.y < -1.0f && !gameWon) {
             gameOver = true;
             lastCarPosition = carPosition;
         }
@@ -2077,7 +2077,7 @@ void myKeyboard(unsigned char button, int x, int y)
 
 void specialKeyboard(int key, int x, int y)
 {
-    if (gameOver) {
+    if (gameOver || gameWon) {
         return;
     }
 
