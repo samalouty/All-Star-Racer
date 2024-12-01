@@ -256,6 +256,7 @@ GLTFModel redWheelsFrontLeft1;
 GLTFModel redWheelsFrontRight1;
 GLTFModel redWheelsBackLeft1;
 GLTFModel redWheelsBackRight1;
+GLTFModel finishModel; 
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -1341,7 +1342,8 @@ std::vector<Vertex> trackVertices = {
     {160.573669f, 0.000000f, -499.004852f},
     { 0, -0.264776, 23.2566 }, 
     { 0.316699, -0.304001, -31.0523 }, 
-    { -242.272, -0.451099, 191.192 }
+    { -242.272, -0.451099, 191.192 }, 
+    { -166.405, -0.833553, -56.9069 }
 };
 
 bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 25.0f) {
@@ -1925,6 +1927,16 @@ void myDisplay(void)
         glPopMatrix();
     }
 
+
+    // Update car model position and rotation
+    glPushMatrix();
+    glTranslatef(112.226, 0, 235.23 - 9);
+    glRotatef(270, 0, 1, 0);
+    glScalef(1.2, 1.2, 1.2);
+    finishModel.DrawModel();
+    glPopMatrix();
+   
+
     // Draw skybox
     glPushMatrix();
     GLUquadricObj* qobj;
@@ -2193,6 +2205,11 @@ void LoadAssets()
     }
 
     if (!coneModel.LoadModel("models/cone/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!finishModel.LoadModel("models/finish/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
         // Handle error
     }
