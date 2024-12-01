@@ -258,6 +258,10 @@ GLTFModel redWheelsFrontRight1;
 GLTFModel redWheelsBackLeft1;
 GLTFModel redWheelsBackRight1;
 GLTFModel finishModel; 
+GLTFModel horizontalTraffic;
+GLTFModel trafficObstacle;
+
+
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -447,6 +451,10 @@ struct Vertex {
 
 std::vector<Vertex> trackVertices = {
     //(226.588, -0.323614, -195.544
+    {65.539, -0.637422, 132.655},
+    {-152.349, -0.598197, 90.8568},
+    {2.16099, -0.519744, -79.0503}, 
+    {-58.844, -0.441293, 86.5857},
     {226.588000f, 0.000000f,-195.544000f},
     {225.96f, 0.0f, -226.859f},
     {227.348f, -0.0f, -259.895f}, 
@@ -1434,8 +1442,8 @@ void updateCarPosition(float deltaTime) {
     carPosition.z += cos(radians) * carSpeed * deltaTime;
 
     if (isPointInTrack(trackVertices, carPosition)) {
-        std::cout << "Car is within the track boundaries." << std::endl;
-        gravityEnabled = false;
+        std::cout << "Car Pos: ";
+        carPosition.print();
     }
     else {
         gravityEnabled = true;
@@ -1459,35 +1467,42 @@ void updateCarPosition(float deltaTime) {
 }
 
 void handleCarControls(float deltaTime) {
-	// Accelerate
-	if (isAccelerating) {
-		carSpeed += acceleration * deltaTime;
-		if (carSpeed > maxSpeed) carSpeed = maxSpeed;
-	}
-	// Brake
-	else if (isBraking) {
-		carSpeed -= deceleration * deltaTime;
-		if (carSpeed < 0) carSpeed = 0;
-	}
-	// Coast (slow down gradually)
-	else {
-		carSpeed -= deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
-		if (carSpeed < 0) carSpeed = 0;
-	}
+    // Accelerate
+    if (isAccelerating) {
+        carSpeed += acceleration * deltaTime;
+        if (carSpeed > maxSpeed) carSpeed = maxSpeed;
+    }
+    // Brake/Reverse
+    else if (isBraking) {
+        carSpeed -= deceleration * deltaTime;
+        if (carSpeed < -20) carSpeed = -20; // Allow negative speed for reverse
+    }
+    // Coast (slow down gradually)
+    else {
+        if (carSpeed > 0) {
+            carSpeed -= deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+            if (carSpeed < 0) carSpeed = 0;
+        }
+        else if (carSpeed < 0) {
+            carSpeed += deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+            if (carSpeed > 0) carSpeed = 0;
+        }
+    }
 
-	// Turn left
-	if (wheelRotationY > 0) {
-		carRotation += turnSpeed * deltaTime * (carSpeed / maxSpeed);
-	}
-	// Turn right
-	else if (wheelRotationY < 0) {
-		carRotation -= turnSpeed * deltaTime * (carSpeed / maxSpeed);
-	}
+    // Turn left
+    if (wheelRotationY > 0) {
+        carRotation += turnSpeed * deltaTime * (carSpeed / maxSpeed);
+    }
+    // Turn right
+    else if (wheelRotationY < 0) {
+        carRotation -= turnSpeed * deltaTime * (carSpeed / maxSpeed);
+    }
 
-	// Normalize rotation to 0-360 degrees
-	while (carRotation >= 360.0f) carRotation -= 360.0f;
-	while (carRotation < 0.0f) carRotation += 360.0f;
+    // Normalize rotation to 0-360 degrees
+    while (carRotation >= 360.0f) carRotation -= 360.0f;
+    while (carRotation < 0.0f) carRotation += 360.0f;
 }
+
 
 
 
@@ -2345,30 +2360,31 @@ void specialKeyboard(int key, int x, int y)
         return;
     }
 
-	switch (key)
-	{
-	case GLUT_KEY_LEFT:
-		wheelRotationY += 15.0f;
-		break;
-	case GLUT_KEY_RIGHT:
-		wheelRotationY -= 15.0f;
-		break;
-	case GLUT_KEY_UP:
-		wheelRotationX += 6.0f;
-		isAccelerating = true;
-		isBraking = false;
+    switch (key)
+    {
+    case GLUT_KEY_LEFT:
+        wheelRotationY += 15.0f;
+        break;
+    case GLUT_KEY_RIGHT:
+        wheelRotationY -= 15.0f;
+        break;
+    case GLUT_KEY_UP:
+        wheelRotationX += 6.0f;
+        isAccelerating = true;
+        isBraking = false;
         if (!timerStarted) {
             timerStarted = true;
         }
-		break;
-	case GLUT_KEY_DOWN:
-		wheelRotationX -= 6.0f;
-		isAccelerating = false;
-		isBraking = true;
-		break;
-	}
-	glutPostRedisplay();
+        break;
+    case GLUT_KEY_DOWN:
+        wheelRotationX -= 6.0f;
+        isAccelerating = false;
+        isBraking = true;
+        break;
+    }
+    glutPostRedisplay();
 }
+
 
 void specialKeyboardUp(int key, int x, int y)
 {
@@ -2513,6 +2529,16 @@ void LoadAssets()
     }
 
     if (!finishModel.LoadModel("models/finish/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!horizontalTraffic.LoadModel("models/horizontal-obstacle/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!trafficObstacle.LoadModel("models/traffic-obstacles/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
         // Handle error
     }
