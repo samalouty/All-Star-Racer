@@ -1429,35 +1429,42 @@ void updateCarPosition(float deltaTime) {
 }
 
 void handleCarControls(float deltaTime) {
-	// Accelerate
-	if (isAccelerating) {
-		carSpeed += acceleration * deltaTime;
-		if (carSpeed > maxSpeed) carSpeed = maxSpeed;
-	}
-	// Brake
-	else if (isBraking) {
-		carSpeed -= deceleration * deltaTime;
-		if (carSpeed < 0) carSpeed = 0;
-	}
-	// Coast (slow down gradually)
-	else {
-		carSpeed -= deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
-		if (carSpeed < 0) carSpeed = 0;
-	}
+    // Accelerate
+    if (isAccelerating) {
+        carSpeed += acceleration * deltaTime;
+        if (carSpeed > maxSpeed) carSpeed = maxSpeed;
+    }
+    // Brake/Reverse
+    else if (isBraking) {
+        carSpeed -= deceleration * deltaTime;
+        if (carSpeed < -20) carSpeed = -20; // Allow negative speed for reverse
+    }
+    // Coast (slow down gradually)
+    else {
+        if (carSpeed > 0) {
+            carSpeed -= deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+            if (carSpeed < 0) carSpeed = 0;
+        }
+        else if (carSpeed < 0) {
+            carSpeed += deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+            if (carSpeed > 0) carSpeed = 0;
+        }
+    }
 
-	// Turn left
-	if (wheelRotationY > 0) {
-		carRotation += turnSpeed * deltaTime * (carSpeed / maxSpeed);
-	}
-	// Turn right
-	else if (wheelRotationY < 0) {
-		carRotation -= turnSpeed * deltaTime * (carSpeed / maxSpeed);
-	}
+    // Turn left
+    if (wheelRotationY > 0) {
+        carRotation += turnSpeed * deltaTime * (carSpeed / maxSpeed);
+    }
+    // Turn right
+    else if (wheelRotationY < 0) {
+        carRotation -= turnSpeed * deltaTime * (carSpeed / maxSpeed);
+    }
 
-	// Normalize rotation to 0-360 degrees
-	while (carRotation >= 360.0f) carRotation -= 360.0f;
-	while (carRotation < 0.0f) carRotation += 360.0f;
+    // Normalize rotation to 0-360 degrees
+    while (carRotation >= 360.0f) carRotation -= 360.0f;
+    while (carRotation < 0.0f) carRotation += 360.0f;
 }
+
 
 
 
@@ -2232,30 +2239,31 @@ void specialKeyboard(int key, int x, int y)
         return;
     }
 
-	switch (key)
-	{
-	case GLUT_KEY_LEFT:
-		wheelRotationY += 15.0f;
-		break;
-	case GLUT_KEY_RIGHT:
-		wheelRotationY -= 15.0f;
-		break;
-	case GLUT_KEY_UP:
-		wheelRotationX += 6.0f;
-		isAccelerating = true;
-		isBraking = false;
+    switch (key)
+    {
+    case GLUT_KEY_LEFT:
+        wheelRotationY += 15.0f;
+        break;
+    case GLUT_KEY_RIGHT:
+        wheelRotationY -= 15.0f;
+        break;
+    case GLUT_KEY_UP:
+        wheelRotationX += 6.0f;
+        isAccelerating = true;
+        isBraking = false;
         if (!timerStarted) {
             timerStarted = true;
         }
-		break;
-	case GLUT_KEY_DOWN:
-		wheelRotationX -= 6.0f;
-		isAccelerating = false;
-		isBraking = true;
-		break;
-	}
-	glutPostRedisplay();
+        break;
+    case GLUT_KEY_DOWN:
+        wheelRotationX -= 6.0f;
+        isAccelerating = false;
+        isBraking = true;
+        break;
+    }
+    glutPostRedisplay();
 }
+
 
 void specialKeyboardUp(int key, int x, int y)
 {
