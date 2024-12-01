@@ -258,6 +258,10 @@ GLTFModel redWheelsFrontRight1;
 GLTFModel redWheelsBackLeft1;
 GLTFModel redWheelsBackRight1;
 GLTFModel finishModel; 
+GLTFModel horizontalTraffic;
+GLTFModel trafficObstacle;
+
+
 
 int WIDTH = 1280;
 int HEIGHT = 720;
@@ -1408,8 +1412,8 @@ void updateCarPosition(float deltaTime) {
     carPosition.z += cos(radians) * carSpeed * deltaTime;
 
     if (isPointInTrack(trackVertices, carPosition)) {
-        //std::cout << "Car Pos:." << std::endl;
-        //carPosition.print();
+        std::cout << "Car Pos: ";
+        carPosition.print();
     }
     else {
         gravityEnabled = true;
@@ -2051,6 +2055,24 @@ void myDisplay(void)
 	renderNitros();
     renderSpeedOMeter(carSpeed);
 
+    // draw horizontal- traffic 
+    glPushMatrix();
+    glTranslatef(186.899, 0, 221.466);  // Position your model
+    glScalef(5, 5, 5);  // Scale if needed
+    glRotatef(0, 1, 0, 0);  // Rotate if needed
+    horizontalTraffic.DrawModel();
+    glPopMatrix();
+
+    // draw traffic obstacles 
+    glPushMatrix();
+    glTranslatef(2.23767, 0, -106.795);  // Position your model
+    glScalef(2, 2, 2);  // Scale if needed
+    glRotatef(210, 0 , 1, 0);  // Rotate if needed
+    trafficObstacle.DrawModel();
+    glPopMatrix();
+
+
+
 	// Update car model position and rotation
 	glPushMatrix();
 	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
@@ -2412,6 +2434,16 @@ void LoadAssets()
     }
 
     if (!finishModel.LoadModel("models/finish/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!horizontalTraffic.LoadModel("models/horizontal-obstacle/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!trafficObstacle.LoadModel("models/traffic-obstacles/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
         // Handle error
     }
