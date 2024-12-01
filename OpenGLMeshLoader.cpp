@@ -14,6 +14,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <unordered_map>
+#include <string>
 
 #define M_PI 3.14159265358979323846
 
@@ -334,7 +335,7 @@ GLTexture tex_ground;
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON };
 CameraView currentView = THIRD_PERSON;
 float thirdPersonDistance = 3.0f;
-Vector carPosition(0, 0, 0);
+Vector carPosition(0 ,0, 0);
 float carRotation = 0; // in degrees, 0 means facing negative z-axis
 //Vector(0.2, 0.61, -0.1)
 Vector cameraOffset(0.2, 1.11, -0.2);
@@ -397,6 +398,11 @@ GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 // game over variables 
 bool gameOver = false;
 Vector lastCarPosition(0, 0, 0);
+bool gameWon = false;
+float gameTimer = 90.0f; // 90 seconds timer
+float playerTime = 0.0f;
+bool timerStarted = false;
+
 
 
 //=======================================================================
@@ -1372,38 +1378,54 @@ bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carP
 //=======================================================================
 bool gravityEnabled = false;
 
+bool hasPassedFinishLine() {
+    float finishX = 111.845f;
+    float finishZ = 225.249f;
+    float threshold = 10.0f;
+
+    return (abs(carPosition.x - finishX) < threshold &&
+        abs(carPosition.z - finishZ) < threshold);
+}
+
 void updateCarPosition(float deltaTime) {
-	float radians = carRotation * M_PI / 180.0;
+    float radians = carRotation * M_PI / 180.0;
     if (gravityEnabled) {
         carPosition.y -= 9.8065 * deltaTime;
-        //print car position gravity is enabled at 
-
         std::cout << "Car position when gravity enabled: ";
         carPosition.print();
 
-        if (carPosition.y < -3.0f) {  // Adjust this value as needed
+        if (carPosition.y < -3.0f) {
             gameOver = true;
             lastCarPosition = carPosition;
         }
-        
     }
 
-	// Update position based on current speed and rotation
-	carPosition.x += sin(radians) * carSpeed * deltaTime;
-	carPosition.z += cos(radians) * carSpeed * deltaTime;
+    carPosition.x += sin(radians) * carSpeed * deltaTime;
+    carPosition.z += cos(radians) * carSpeed * deltaTime;
 
     if (isPointInTrack(trackVertices, carPosition)) {
         std::cout << "Car is within the track boundaries." << std::endl;
-
-
-
+        gravityEnabled = false;
     }
     else {
         gravityEnabled = true;
     }
 
-	// Update wheel rotation based on speed
-	wheelRotationX += carSpeed * 360.0f * deltaTime; // Adjust this multiplier as needed
+    wheelRotationX += carSpeed * 360.0f * deltaTime;
+
+    if (!gameWon && hasPassedFinishLine()) {
+        gameWon = true;
+        playerTime = 90.0f - gameTimer; // Calculate player's time
+    }
+
+    // Update game timer
+    if (!gameWon && !gameOver && timerStarted) {
+        gameTimer -= deltaTime;
+        if (gameTimer <= 0) {
+            gameOver = true;
+            lastCarPosition = carPosition;
+        }
+    }
 }
 
 void handleCarControls(float deltaTime) {
@@ -1436,6 +1458,8 @@ void handleCarControls(float deltaTime) {
 	while (carRotation >= 360.0f) carRotation -= 360.0f;
 	while (carRotation < 0.0f) carRotation += 360.0f;
 }
+
+
 
 //=======================================================================
 // Lighting Configuration Function
@@ -1525,6 +1549,16 @@ void updateCamera()
         Eye = Vector(lastCarPosition.x, lastCarPosition.y + 5.0f, lastCarPosition.z + 10.0f);
         At = Vector(carPosition.x, 0, carPosition.z);
 	}
+    else if (gameWon) {
+        // Position the camera in front of the car
+        float radians = carRotation * M_PI / 180.0;
+        Eye = Vector(
+            carPosition.x + sin(radians) * 10.0f,
+            carPosition.y + 3.0f,
+            carPosition.z + cos(radians) * 10.0f
+        );
+        At = Vector(carPosition.x, carPosition.y, carPosition.z);
+    }
     else
     if (currentView == INSIDE_FRONT)
     {
@@ -1600,21 +1634,6 @@ void updateCamera()
 	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
 }
 
-//=======================================================================
-// Game Over Screen
-//======================================================================
-
-void resetGame() {
-    gravityEnabled = false;
-    gameOver = false;
-    carPosition = Vector(0, 0, 0);  // Reset car position
-    carRotation = 0;  // Reset car rotation
-    carSpeed = 0;  // Reset car speed
-    wheelRotationX = 0;  // Reset wheel rotation
-    wheelRotationY = 0;  // Reset wheel rotation
-    sunsetProgress = 0.0f;  // Reset sunset progress
-}
-
 void drawGameOverText() {
 
     glMatrixMode(GL_PROJECTION);
@@ -1649,6 +1668,72 @@ void drawGameOverText() {
     glEnable(GL_TEXTURE_2D);
 }
 
+void drawHUD() {
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, WIDTH, 0, HEIGHT);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    // Draw timer
+    glColor3f(1.0f, 1.0f, 1.0f);
+    glRasterPos2i(10, HEIGHT - 20);
+    std::string timerText;
+    if (!timerStarted) {
+        timerText = "Press UP to start";
+    }
+    else {
+        timerText = "Time: " + std::to_string(static_cast<int>(gameTimer));
+    }
+    for (char c : timerText) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+
+    // Draw win text
+    if (gameWon) {
+        glColor3f(0.0f, 1.0f, 0.0f);
+        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2);
+        std::string winText = "You Win! Time: " + std::to_string(playerTime) + " seconds";
+        for (char c : winText) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        }
+    }
+
+    if (gameOver) {
+        drawGameOverText();
+    }
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+}
+
+
+//=======================================================================
+// Game Over Screen
+//======================================================================
+
+void resetGame() {
+    gravityEnabled = false;
+    gameOver = false;
+    carPosition = Vector(0, 0, 0);  // Reset car position
+    carRotation = 0;  // Reset car rotation
+    carSpeed = 0;  // Reset car speed
+    wheelRotationX = 0;  // Reset wheel rotation
+    wheelRotationY = 0;  // Reset wheel rotation
+    sunsetProgress = 0.0f;  // Reset sunset progress
+    gameWon = false;
+    gameTimer = 90.0f;
+    playerTime = 0.0f;
+
+}
+
+
+
 //=======================================================================
 // Material Configuration Function
 //======================================================================
@@ -1675,52 +1760,18 @@ void InitMaterial()
 //=======================================================================
 void myInit(void)
 {
-	glClearColor(0.0, 0.0, 0.0, 0.0);
-
-	glMatrixMode(GL_PROJECTION);
-
-	glLoadIdentity();
-
-	gluPerspective(fovy, aspectRatio, zNear, zFar);
-	//*******************************************************************************************//
-	// fovy:			Angle between the bottom and top of the projectors, in degrees.			 //
-	// aspectRatio:		Ratio of width to height of the clipping plane.							 //
-	// zNear and zFar:	Specify the front and back clipping planes distances from camera.		 //
-	//*******************************************************************************************//
-
-	glMatrixMode(GL_MODELVIEW);
-
-	glLoadIdentity();
-
-	gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-	//*******************************************************************************************//
-	// EYE (ex, ey, ez): defines the location of the camera.									 //
-	// AT (ax, ay, az):	 denotes the direction where the camera is aiming at.					 //
-	// UP (ux, uy, uz):  denotes the upward orientation of the camera.							 //
-	//*******************************************************************************************//
-
-	InitLightSource();
-
-	InitMaterial();
-
-	glEnable(GL_DEPTH_TEST);
-
-	glEnable(GL_NORMALIZE);
-
-	// Enable texturing
-	glEnable(GL_TEXTURE_2D);
-
-
-
-	// Enable depth testing
-	glEnable(GL_DEPTH_TEST);
-
-	// Enable normal normalization
-	glEnable(GL_NORMALIZE);
-
-	// Enable color material
-	glEnable(GL_COLOR_MATERIAL);
-	glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(fovy, aspectRatio, zNear, zFar);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+    InitLightSource();
+    InitMaterial();
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_NORMALIZE);
+    glEnable(GL_TEXTURE_2D);
 }
 
 //=======================================================================
@@ -1785,154 +1836,127 @@ void renderNitros() {
 //=======================================================================
 void myDisplay(void)
 {
-	static int lastTime = 0;
-	int currentTime = glutGet(GLUT_ELAPSED_TIME);
-	float deltaTime = (currentTime - lastTime) / 1000.0f;
-	lastTime = currentTime;
-
-	handleCarControls(deltaTime);
-	updateCarPosition(deltaTime);
+    static int lastTime = 0;
+    int currentTime = glutGet(GLUT_ELAPSED_TIME);
+    float deltaTime = (currentTime - lastTime) / 1000.0f;
+    lastTime = currentTime;
+    handleCarControls(deltaTime);
+    updateCarPosition(deltaTime);
     updateSunPosition(deltaTime);
     updateNitroAnimation();
-
-	carPosition.print();
-
+    carPosition.print();
     glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-
     updateCamera();
-
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
     glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
-
-
-	//// Draw Ground
-	//RenderGround();
-
-	// Draw Tree Model
-	glPushMatrix();
-	glTranslatef(10, 0, 0);
-	glScalef(0.7, 0.7, 0.7);
-	model_tree.Draw();
-	glPopMatrix();
-
-	// Draw house Model
-	//glPushMatrix();
-	//glRotatef(90.f, 1, 0, 0);
-	//model_house.Draw();
-	//glPopMatrix();
-
-	//trynna draw a bugatti
-	//glPushMatrix();
-	//glTranslatef(0, 0, 0);  // Position your model
-	//glScalef(0.3, 0.3, 0.3);  // Scale if needed
-	//glRotatef(90, 1, 0, 0);  // Rotate if needed
-	//model_bugatti.Draw();
-	//glPopMatrix();
-
-	//glPushMatrix();
-	//glTranslatef(0, 0, 0);  // Position your model
-	//glScalef(1.0, 1.0, 1.0);  // Scale if needed
-	//glRotatef(0, 1, 0, 0);  // Rotate if needed
-	//model_moscow.Draw();
-	//glPopMatrix();
-
-	// use tinygltf to draw gltf model
-
-	//glPushMatrix();
-	//glTranslatef(0, 0, 0);  // Position your model
-	//glScalef(0.09, 0.09, 0.09);  // Scale if needed
-	//glRotatef(0, 1, 0, 0);  // Rotate if needed
-	//GLTFModel::DrawModel(gltfModel, "models/test/scene.gltf");
-	//glPopMatrix();
-
-	// In your render function
-	glPushMatrix();
-	glTranslatef(0, 0, 0);  // Position your model
-	glScalef(1, 1, 1);  // Scale if needed
-	glRotatef(90, 0, 1, 0);  // Rotate if needed
-	gltfModel1.DrawModel();
-	glPopMatrix();
-
+    //// Draw Ground
+    //RenderGround();
+    // Draw Tree Model
+    glPushMatrix();
+    glTranslatef(10, 0, 0);
+    glScalef(0.7, 0.7, 0.7);
+    model_tree.Draw();
+    glPopMatrix();
+    // Draw house Model
+    //glPushMatrix();
+    //glRotatef(90.f, 1, 0, 0);
+    //model_house.Draw();
+    //glPopMatrix();
+    //trynna draw a bugatti
+    //glPushMatrix();
+    //glTranslatef(0, 0, 0);  // Position your model
+    //glScalef(0.3, 0.3, 0.3);  // Scale if needed
+    //glRotatef(90, 1, 0, 0);  // Rotate if needed
+    //model_bugatti.Draw();
+    //glPopMatrix();
+    //glPushMatrix();
+    //glTranslatef(0, 0, 0);  // Position your model
+    //glScalef(1.0, 1.0, 1.0);  // Scale if needed
+    //glRotatef(0, 1, 0, 0);  // Rotate if needed
+    //model_moscow.Draw();
+    //glPopMatrix();
+    // use tinygltf to draw gltf model
+    //glPushMatrix();
+    //glTranslatef(0, 0, 0);  // Position your model
+    //glScalef(0.09, 0.09, 0.09);  // Scale if needed
+    //glRotatef(0, 1, 0, 0);  // Rotate if needed
+    //GLTFModel::DrawModel(gltfModel, "models/test/scene.gltf");
+    //glPopMatrix();
+    // In your render function
+    glPushMatrix();
+    glTranslatef(0, 0, 0);  // Position your model
+    glScalef(1, 1, 1);  // Scale if needed
+    glRotatef(90, 0, 1, 0);  // Rotate if needed
+    gltfModel1.DrawModel();
+    glPopMatrix();
     //glPushMatrix();
     //glTranslatef(1, 1, 1);  // Position your model
     //glScalef(0.5, 0.5, 0.5);  // Scale if needed
     //glRotatef(180, 0, 1, 0);  // Rotate if needed
     //nitroModel.DrawModel();
     //glPopMatrix();
-
     renderCones();
-	renderNitros();
-
-	// Update car model position and rotation
-	glPushMatrix();
-	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);
-	//glScalef(1, 1, 1);
-	glRotatef(0, 0, 1, 0);
-	carModel1.DrawModel();
-	glPopMatrix();
-
-// Offsets for the wheels relative to the car's position
-	float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
-	float wheelOffsetY = 0.5f; // Vertical offset below the car
-	float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
-	float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
-
-	// Draw back left wheel
-	glPushMatrix();
-	//glScalef(1, 1, 1); 
-	glTranslatef(carPosition.x, carPosition.y , carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef( -wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
-
-	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
-	glRotatef(180, 0, 1, 0);  // to face the right direction
-	redWheelsBackLeft1.DrawModel();
-	glPopMatrix();
-
-	// Draw back right wheel
-	glPushMatrix();
-	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
-	//glScalef(0.5, 0.5, 0.5);
-	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
-	glRotatef(0, 0, 1, 0);
-	redWheelsBackRight1.DrawModel();
-	glPopMatrix();
-
-	if (wheelRotationY > 52.5) {
-		wheelRotationY = 52.5; 
-	}
-
-	if (wheelRotationY < -52.5) {
-		wheelRotationY = -52.5;
-	}
-
-
-	// Draw front left wheel
-	glPushMatrix();
-	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
-	//glScalef(0.5, 0.5, 0.5);
-	glRotatef(180 + wheelRotationY, 0, 1, 0);
-	glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-	redWheelsFrontLeft1.DrawModel();
-	glPopMatrix();
-
-	// Draw front right wheel
-	glPushMatrix();
-	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
-	glRotatef(wheelRotationY,0, 1, 0);
-	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-	redWheelsFrontRight1.DrawModel(); 
-	glPopMatrix();
-
+    renderNitros();
+    // Update car model position and rotation
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);
+    //glScalef(1, 1, 1);
+    glRotatef(0, 0, 1, 0);
+    carModel1.DrawModel();
+    glPopMatrix();
+    // Offsets for the wheels relative to the car's position
+    float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
+    float wheelOffsetY = 0.5f; // Vertical offset below the car
+    float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
+    float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
+    // Draw back left wheel
+    glPushMatrix();
+    //glScalef(1, 1, 1); 
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+    glRotatef(180, 0, 1, 0);  // to face the right direction
+    redWheelsBackLeft1.DrawModel();
+    glPopMatrix();
+    // Draw back right wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+    //glScalef(0.5, 0.5, 0.5);
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+    glRotatef(0, 0, 1, 0);
+    redWheelsBackRight1.DrawModel();
+    glPopMatrix();
+    if (wheelRotationY > 52.5) {
+        wheelRotationY = 52.5;
+    }
+    if (wheelRotationY < -52.5) {
+        wheelRotationY = -52.5;
+    }
+    // Draw front left wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
+    //glScalef(0.5, 0.5, 0.5);
+    glRotatef(180 + wheelRotationY, 0, 1, 0);
+    glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    redWheelsFrontLeft1.DrawModel();
+    glPopMatrix();
+    // Draw front right wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
+    glRotatef(wheelRotationY, 0, 1, 0);
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    redWheelsFrontRight1.DrawModel();
+    glPopMatrix();
     if (sunVisibility > 0.0f) {
         glPushMatrix();
         glTranslatef(sunPosition.x, sunPosition.y, sunPosition.z);
@@ -1941,8 +1965,6 @@ void myDisplay(void)
         glEnable(GL_LIGHTING);
         glPopMatrix();
     }
-
-
     // Update car model position and rotation
     glPushMatrix();
     glTranslatef(112.226, 0, 235.23 - 9);
@@ -1950,8 +1972,6 @@ void myDisplay(void)
     glScalef(1.2, 1.2, 1.2);
     finishModel.DrawModel();
     glPopMatrix();
-   
-
     // Draw skybox
     glPushMatrix();
     GLUquadricObj* qobj;
@@ -1965,19 +1985,20 @@ void myDisplay(void)
     gluDeleteQuadric(qobj);
     glPopMatrix();
 
-    if (gameOver) {
-        drawGameOverText();
-    }
+    
+    drawHUD();
+
 
     glutSwapBuffers();
 }
+
 
 //=======================================================================
 // Keyboard Function
 //=======================================================================
 void myKeyboard(unsigned char button, int x, int y)
 {
-    if(gameOver)
+    if(gameOver || gameWon)
         {
 		if (button == 'r' || button == 'R')
 		{
@@ -2072,6 +2093,9 @@ void specialKeyboard(int key, int x, int y)
 		wheelRotationX += 6.0f;
 		isAccelerating = true;
 		isBraking = false;
+        if (!timerStarted) {
+            timerStarted = true;
+        }
 		break;
 	case GLUT_KEY_DOWN:
 		wheelRotationX -= 6.0f;
