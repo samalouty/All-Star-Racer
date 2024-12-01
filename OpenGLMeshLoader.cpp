@@ -1766,6 +1766,145 @@ void renderCones() {
     }
 }
 
+void renderText(float x, float y, const std::string& text) {
+    glRasterPos2f(x, y);
+    for (char c : text) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+}
+
+std::string formatSpeed(float speed) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(1) << speed;
+    return oss.str();
+}
+
+void renderSpeedOMeter(float speed) {
+    const float centerX = 100.0f;  // Center of the speedometer (X position)
+    const float centerY = 100.0f;  // Center of the speedometer (Y position)
+    const float radius = 80.0f;    // Radius of the speedometer
+    const float maxSpeed = 200.0f; // Maximum speed
+    const int numMarkers = 10;     // Number of markers
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, WIDTH, 0, HEIGHT);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    // Disable lighting for 2D rendering
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+
+    // **Draw Metallic Circular Border**
+    glColor3f(0.6f, 0.6f, 0.6f);  // Silver color
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(centerX, centerY);
+    for (int i = 0; i <= 360; ++i) {
+        float angle = i * M_PI / 180.0f;
+        glVertex2f(centerX + (radius + 5) * cos(angle), centerY + (radius + 5) * sin(angle));
+    }
+    glEnd();
+
+    // **Draw Gradient Background**
+    for (int i = 0; i < 100; ++i) {
+        glColor3f(0.0f, 0.0f, 0.0f + (i * 0.01f));  // Dark-to-light gradient
+        glBegin(GL_TRIANGLE_FAN);
+        for (int j = 0; j <= 360; ++j) {
+            float angle = j * M_PI / 180.0f;
+            glVertex2f(centerX + radius * (1 - i * 0.01f) * cos(angle),
+                centerY + radius * (1 - i * 0.01f) * sin(angle));
+        }
+        glEnd();
+    }
+
+    // **Draw Markers and Labels**
+    glColor3f(1.0f, 1.0f, 1.0f); // White color for markers and labels
+    for (int i = 0; i <= numMarkers; ++i) {
+        float angle = (135.0f - (270.0f * i / numMarkers)) * M_PI / 180.0f;
+        float innerX = centerX + (radius - 10) * cos(angle);
+        float innerY = centerY + (radius - 10) * sin(angle);
+        float outerX = centerX + radius * cos(angle);
+        float outerY = centerY + radius * sin(angle);
+        glBegin(GL_LINES);
+        glVertex2f(innerX, innerY);
+        glVertex2f(outerX, outerY);
+        glEnd();
+
+        // Draw speed labels
+        std::ostringstream oss;
+        oss << (i * maxSpeed / numMarkers);
+        std::string speedLabel = oss.str();
+        float textX = centerX + (radius - 25) * cos(angle) - 5;
+        float textY = centerY + (radius - 25) * sin(angle) - 5;
+        glRasterPos2f(textX, textY);
+        for (char c : speedLabel) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+        }
+    }
+
+    // **Draw Needle**
+    float needleAngle = (135.0f - (270.0f * speed / maxSpeed)) * M_PI / 180.0f;
+
+    // Needle Shadow
+    glColor3f(0.3f, 0.0f, 0.0f);  // Dark red shadow
+    glBegin(GL_QUADS);
+    glVertex2f(centerX + 2 * cos(needleAngle - M_PI / 2), centerY + 2 * sin(needleAngle - M_PI / 2)); // Left base
+    glVertex2f(centerX + 2 * cos(needleAngle + M_PI / 2), centerY + 2 * sin(needleAngle + M_PI / 2)); // Right base
+    glVertex2f(centerX + (radius - 20) * cos(needleAngle + 0.02f),
+        centerY + (radius - 20) * sin(needleAngle + 0.02f));  // Right tip
+    glVertex2f(centerX + (radius - 20) * cos(needleAngle - 0.02f),
+        centerY + (radius - 20) * sin(needleAngle - 0.02f));  // Left tip
+    glEnd();
+
+    // Needle Body
+    glColor3f(1.0f, 0.0f, 0.0f);  // Bright red
+    glBegin(GL_QUADS);
+    glVertex2f(centerX + 2 * cos(needleAngle - M_PI / 2), centerY + 2 * sin(needleAngle - M_PI / 2)); // Left base
+    glVertex2f(centerX + 2 * cos(needleAngle + M_PI / 2), centerY + 2 * sin(needleAngle + M_PI / 2)); // Right base
+    glVertex2f(centerX + (radius - 20) * cos(needleAngle + 0.02f),
+        centerY + (radius - 20) * sin(needleAngle + 0.02f));  // Right tip
+    glVertex2f(centerX + (radius - 20) * cos(needleAngle - 0.02f),
+        centerY + (radius - 20) * sin(needleAngle - 0.02f));  // Left tip
+    glEnd();
+
+    // **Draw Center Cap**
+    glColor3f(0.8f, 0.8f, 0.8f);  // Metallic silver
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(centerX, centerY);
+    for (int i = 0; i <= 360; ++i) {
+        float angle = i * M_PI / 180.0f;
+        glVertex2f(centerX + 5 * cos(angle), centerY + 5 * sin(angle));
+    }
+    glEnd();
+
+    // **Glass Overlay**
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+    glColor4f(1.0f, 1.0f, 1.0f, 0.2f);  // Transparent white
+    glBegin(GL_TRIANGLE_FAN);
+    glVertex2f(centerX, centerY);
+    for (int i = 0; i <= 360; ++i) {
+        float angle = i * M_PI / 180.0f;
+        glVertex2f(centerX + radius * cos(angle), centerY + radius * sin(angle));
+    }
+    glEnd();
+    glDisable(GL_BLEND);
+
+    // Re-enable lighting and depth testing
+    glEnable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+}
+
+
 void renderNitros() {
     for (const auto& nitro : nitros) {
         float rotation = -nitro.animationPhase * 45;
@@ -1864,6 +2003,7 @@ void myDisplay(void)
 
     renderCones();
 	renderNitros();
+    renderSpeedOMeter(carSpeed);
 
 	// Update car model position and rotation
 	glPushMatrix();
