@@ -395,15 +395,42 @@ GLfloat lightAmbient[] = { 0.3f, 0.3f, 0.3f, 1.0f };
 GLfloat lightDiffuse[] = { 1.0f, 1.0f, 0.9f, 1.0f };
 GLfloat lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
 
+GLfloat headlight1_pos[] = { 30.0f, 1.5f, 100.0f, 1.0f }; // Right headlight position
+GLfloat headlight2_pos[] = { -0.5f, 0.2f, 1.0f, 1.0f }; // Left headlight position
+GLfloat headlight_dir[] = { 0.0f, 0.0f, -1.0f };        // Direction of headlights
+
 // game over variables 
 bool gameOver = false;
 Vector lastCarPosition(0, 0, 0);
 bool gameWon = false;
-float gameTimer = 90.0f; // 90 seconds timer
+float gameTimer = 900.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
 
 
+
+void setupLighting() {
+    glEnable(GL_LIGHTING);
+
+    // Headlight 1 (Right)
+    glEnable(GL_LIGHT2);
+    glLightfv(GL_LIGHT2, GL_POSITION, headlight1_pos);     // Position
+    glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, headlight_dir); // Direction
+    glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
+    glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 10.0f);          // Intensity falloff
+    GLfloat lightColor[] = { 1.0f, 1.0f, 0.8f, 1.0f };     // Warm white
+    glLightfv(GL_LIGHT2, GL_DIFFUSE, lightColor);
+    glLightfv(GL_LIGHT2, GL_SPECULAR, lightColor);
+
+    // Headlight 2 (Left)
+    glEnable(GL_LIGHT1);
+    glLightfv(GL_LIGHT1, GL_POSITION, headlight2_pos);     // Position
+    glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, headlight_dir); // Direction
+    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
+    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 10.0f);          // Intensity falloff
+    glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor);
+    glLightfv(GL_LIGHT1, GL_SPECULAR, lightColor);
+}
 
 //=======================================================================
 // Collision Functions
@@ -1350,10 +1377,13 @@ std::vector<Vertex> trackVertices = {
     { 0, -0.264776, 23.2566 }, 
     { 0.316699, -0.304001, -31.0523 }, 
     { -242.272, -0.451099, 191.192 }, 
-    { -166.405, -0.833553, -56.9069 }
+    { -166.405, -0.833553, -56.9069 },
+    { 65.5206, -1.3631, 132.802 },
+    { -152.746, -1.49059, 87.0166 },
+    { -60.8416, -1.6573, 87.6993 }
 };
 
-bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 25.0f) {
+bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 20.0f) {
     // Loop through each vertex in the track
     for (const auto& vertex : trackVertices) {
         // Create a Vector for the track vertex
@@ -1668,170 +1698,9 @@ void drawGameOverText() {
     glEnable(GL_TEXTURE_2D);
 }
 
-void drawHUD() {
-    glMatrixMode(GL_PROJECTION);
-    glPushMatrix();
-    glLoadIdentity();
-    gluOrtho2D(0, WIDTH, 0, HEIGHT);
-
-    glMatrixMode(GL_MODELVIEW);
-    glPushMatrix();
-    glLoadIdentity();
-
-    // Draw timer
-    glColor3f(1.0f, 1.0f, 1.0f);
-    glRasterPos2i(10, HEIGHT - 20);
-    std::string timerText;
-    if (!timerStarted) {
-        timerText = "Press UP to start";
-    }
-    else {
-        timerText = "Time: " + std::to_string(static_cast<int>(gameTimer));
-    }
-    for (char c : timerText) {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
-    }
-
-    // Draw win text
-    if (gameWon) {
-        glColor3f(0.0f, 1.0f, 0.0f);
-        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2);
-        std::string winText = "You Win! Time: " + std::to_string(playerTime) + " seconds";
-        for (char c : winText) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
-        }
-    }
-
-    if (gameOver) {
-        drawGameOverText();
-    }
-
-    glMatrixMode(GL_PROJECTION);
-    glPopMatrix();
-    glMatrixMode(GL_MODELVIEW);
-    glPopMatrix();
-}
-
-
-//=======================================================================
-// Game Over Screen
-//======================================================================
-
-void resetGame() {
-    gravityEnabled = false;
-    gameOver = false;
-    carPosition = Vector(0, 0, 0);  // Reset car position
-    carRotation = 0;  // Reset car rotation
-    carSpeed = 0;  // Reset car speed
-    wheelRotationX = 0;  // Reset wheel rotation
-    wheelRotationY = 0;  // Reset wheel rotation
-    sunsetProgress = 0.0f;  // Reset sunset progress
-    gameWon = false;
-    gameTimer = 90.0f;
-    playerTime = 0.0f;
-
-}
-
-
-
-//=======================================================================
-// Material Configuration Function
-//======================================================================
-void InitMaterial()
-{
-	// Enable Material Tracking
-	glEnable(GL_COLOR_MATERIAL);
-
-	// Sich will be assigneet Material Properties whd by glColor
-	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
-
-	// Set Material's Specular Color
-	// Will be applied to all objects
-	GLfloat specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-	glMaterialfv(GL_FRONT, GL_SPECULAR, specular);
-
-	// Set Material's Shine value (0->128)
-	GLfloat shininess[] = { 96.0f };
-	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
-}
-
-//=======================================================================
-// OpengGL Configuration Function
-//=======================================================================
-void myInit(void)
-{
-    glClearColor(0.0, 0.0, 0.0, 0.0);
-    glMatrixMode(GL_PROJECTION);
-    glLoadIdentity();
-    gluPerspective(fovy, aspectRatio, zNear, zFar);
-    glMatrixMode(GL_MODELVIEW);
-    glLoadIdentity();
-    gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
-    InitLightSource();
-    InitMaterial();
-    glEnable(GL_DEPTH_TEST);
-    glEnable(GL_NORMALIZE);
-    glEnable(GL_TEXTURE_2D);
-}
-
-//=======================================================================
-// Render Functions
-//=======================================================================
-void RenderGround()
-{
-	glDisable(GL_LIGHTING);	// Disable lighting 
-
-	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
-
-	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
-
-	glBindTexture(GL_TEXTURE_2D, tex_ground.texture[0]);	// Bind the ground texture
-
-	glPushMatrix();
-	glBegin(GL_QUADS);
-	glNormal3f(0, 1, 0);	// Set quad normal direction.
-	glTexCoord2f(0, 0);		// Set tex coordinates ( Using (0,0) -> (5,5) with texture wrapping set to GL_REPEAT to simulate the ground repeated grass texture).
-	glVertex3f(-20, 0, -20);
-	glTexCoord2f(5, 0);
-	glVertex3f(20, 0, -20);
-	glTexCoord2f(5, 5);
-	glVertex3f(20, 0, 20);
-	glTexCoord2f(0, 5);
-	glVertex3f(-20, 0, 20);
-	glEnd();
-	glPopMatrix();
-
-	glEnable(GL_LIGHTING);	// Enable lighting again for other entites coming throung the pipeline.
-
-	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
-}
-
-void renderCones() {
-    for (const auto& cone : cones) {
-        glPushMatrix();
-        glTranslatef(cone.x, cone.y, cone.z);
-        glScalef(1.0f, 1.0f, 1.0f);  // Adjust scale if needed
-        glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
-        coneModel.DrawModel();
-        glPopMatrix();
-    }
-}
-
-void renderText(float x, float y, const std::string& text) {
-    glRasterPos2f(x, y);
-    for (char c : text) {
-        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
-    }
-}
-
-std::string formatSpeed(float speed) {
-    std::ostringstream oss;
-    oss << std::fixed << std::setprecision(1) << speed;
-    return oss.str();
-}
 
 void renderSpeedOMeter(float speed) {
-    const float centerX = 100.0f;  // Center of the speedometer (X position)
+    const float centerX = 1100.0f;  // Center of the speedometer (X position)
     const float centerY = 100.0f;  // Center of the speedometer (Y position)
     const float radius = 80.0f;    // Radius of the speedometer
     const float maxSpeed = 200.0f; // Maximum speed
@@ -1955,6 +1824,275 @@ void renderSpeedOMeter(float speed) {
     glPopMatrix();
 }
 
+// Function to draw a rounded rectangle
+void drawRoundedRect(float x, float y, float width, float height, float radius) {
+    int segments = 20;
+    glBegin(GL_POLYGON);
+    for (int i = 0; i <= segments; i++) {
+        float theta = i * 2.0f * M_PI / segments;
+        float cx = x + radius - cosf(theta) * radius;
+        float cy = y + radius - sinf(theta) * radius;
+        glVertex2f(cx, cy);
+    }
+    for (int i = 0; i <= segments; i++) {
+        float theta = i * 2.0f * M_PI / segments;
+        float cx = x + width - radius + cosf(theta) * radius;
+        float cy = y + radius - sinf(theta) * radius;
+        glVertex2f(cx, cy);
+    }
+    for (int i = 0; i <= segments; i++) {
+        float theta = i * 2.0f * M_PI / segments;
+        float cx = x + width - radius + cosf(theta) * radius;
+        float cy = y + height - radius + sinf(theta) * radius;
+        glVertex2f(cx, cy);
+    }
+    for (int i = 0; i <= segments; i++) {
+        float theta = i * 2.0f * M_PI / segments;
+        float cx = x + radius - cosf(theta) * radius;
+        float cy = y + height - radius + sinf(theta) * radius;
+        glVertex2f(cx, cy);
+    }
+    glEnd();
+}
+
+void drawRoundedRectOutline(float x, float y, float width, float height, float radius) {
+    int segments = 20;
+    glBegin(GL_LINE_LOOP);
+    for (int i = 0; i <= segments; i++) {
+        float theta = i * 2.0f * M_PI / segments;
+        float cx = x + radius - cosf(theta) * radius;
+        float cy = y + radius - sinf(theta) * radius;
+        glVertex2f(cx, cy);
+    }
+    for (int i = 0; i <= segments; i++) {
+        float theta = i * 2.0f * M_PI / segments;
+        float cx = x + width - radius + cosf(theta) * radius;
+        float cy = y + radius - sinf(theta) * radius;
+        glVertex2f(cx, cy);
+    }
+    for (int i = 0; i <= segments; i++) {
+        float theta = i * 2.0f * M_PI / segments;
+        float cx = x + width - radius + cosf(theta) * radius;
+        float cy = y + height - radius + sinf(theta) * radius;
+        glVertex2f(cx, cy);
+    }
+    for (int i = 0; i <= segments; i++) {
+        float theta = i * 2.0f * M_PI / segments;
+        float cx = x + radius - cosf(theta) * radius;
+        float cy = y + height - radius + sinf(theta) * radius;
+        glVertex2f(cx, cy);
+    }
+    glEnd();
+}
+void drawHUD() {
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, WIDTH, 0, HEIGHT);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    // Disable lighting for 2D rendering
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+
+    // Stopwatch dimensions and position
+    float stopwatchX = 20;
+    float stopwatchY = HEIGHT - 100;
+    float stopwatchWidth = 180;
+    float stopwatchHeight = 60;
+
+    // Draw stopwatch body (rounded rectangle)
+    glColor3f(0.2f, 0.2f, 0.2f); // Dark gray
+    drawRoundedRect(stopwatchX, stopwatchY, stopwatchWidth, stopwatchHeight, 10);
+
+    // Draw stopwatch screen
+    glColor3f(0.0f, 0.0f, 0.0f); // Black screen
+    drawRoundedRect(stopwatchX + 5, stopwatchY + 5, stopwatchWidth - 10, stopwatchHeight - 10, 5);
+
+    // Draw screen border
+    glLineWidth(2.0f);
+    glColor3f(0.5f, 0.5f, 0.5f); // Gray border
+    glBegin(GL_LINE_LOOP);
+    drawRoundedRectOutline(stopwatchX + 5, stopwatchY + 5, stopwatchWidth - 10, stopwatchHeight - 10, 5);
+    glEnd();
+
+    // Format time as HH:MM:SS
+    int totalSeconds = static_cast<int>(gameTimer);
+    int hours = totalSeconds / 3600;
+    int minutes = (totalSeconds % 3600) / 60;
+    int seconds = totalSeconds % 60;
+    int milliseconds = static_cast<int>((gameTimer - totalSeconds) * 100);
+
+    std::ostringstream oss;
+    oss << std::setfill('0') << std::setw(2) << hours << ":"
+        << std::setfill('0') << std::setw(2) << minutes << ":"
+        << std::setfill('0') << std::setw(2) << seconds << "."
+        << std::setfill('0') << std::setw(2) << milliseconds;
+
+    std::string timerText = oss.str();
+
+    // Draw digital time text
+    glColor3f(0.0f, 1.0f, 0.0f); // Bright green for digital display
+    float textX = stopwatchX + 15;
+    float textY = stopwatchY + stopwatchHeight / 2 + 5;
+    glRasterPos2f(textX, textY);
+    for (char c : timerText) {
+        glutBitmapCharacter(GLUT_BITMAP_9_BY_15, c);
+    }
+
+    // Render speedometer if game is active
+    if (!gameWon && !gameOver) {
+        renderSpeedOMeter(abs(carSpeed * 2.1));
+    }
+
+    // Draw win text
+    if (gameWon) {
+        glColor3f(0.0f, 1.0f, 0.0f); // Green color for "You Win"
+        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2);
+        std::string winText = "You Win! Time: " + std::to_string(playerTime) + " seconds";
+        for (char c : winText) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        }
+    }
+
+    // Draw game-over text
+    if (gameOver) {
+        drawGameOverText();
+    }
+
+    // Re-enable lighting and depth testing
+    glEnable(GL_LIGHTING);
+    glEnable(GL_DEPTH_TEST);
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+}
+
+
+
+
+//=======================================================================
+// Game Over Screen
+//======================================================================
+
+void resetGame() {
+    gravityEnabled = false;
+    gameOver = false;
+    carPosition = Vector(0, 0, 0);  // Reset car position
+    carRotation = 0;  // Reset car rotation
+    carSpeed = 0;  // Reset car speed
+    wheelRotationX = 0;  // Reset wheel rotation
+    wheelRotationY = 0;  // Reset wheel rotation
+    sunsetProgress = 0.0f;  // Reset sunset progress
+    gameWon = false;
+    gameTimer = 90.0f;
+    playerTime = 0.0f;
+
+}
+
+
+
+//=======================================================================
+// Material Configuration Function
+//======================================================================
+void InitMaterial()
+{
+	// Enable Material Tracking
+	glEnable(GL_COLOR_MATERIAL);
+
+	// Sich will be assigneet Material Properties whd by glColor
+	glColorMaterial(GL_FRONT, GL_AMBIENT_AND_DIFFUSE);
+
+	// Set Material's Specular Color
+	// Will be applied to all objects
+	GLfloat specular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+	glMaterialfv(GL_FRONT, GL_SPECULAR, specular);
+
+	// Set Material's Shine value (0->128)
+	GLfloat shininess[] = { 96.0f };
+	glMaterialfv(GL_FRONT, GL_SHININESS, shininess);
+}
+
+//=======================================================================
+// OpengGL Configuration Function
+//=======================================================================
+void myInit(void)
+{
+    glClearColor(0.0, 0.0, 0.0, 0.0);
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(fovy, aspectRatio, zNear, zFar);
+    glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+    gluLookAt(Eye.x, Eye.y, Eye.z, At.x, At.y, At.z, Up.x, Up.y, Up.z);
+    InitLightSource();
+    InitMaterial();
+    glEnable(GL_DEPTH_TEST);
+    glEnable(GL_NORMALIZE);
+    glEnable(GL_TEXTURE_2D);
+}
+
+//=======================================================================
+// Render Functions
+//=======================================================================
+void RenderGround()
+{
+	glDisable(GL_LIGHTING);	// Disable lighting 
+
+	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
+
+	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
+
+	glBindTexture(GL_TEXTURE_2D, tex_ground.texture[0]);	// Bind the ground texture
+
+	glPushMatrix();
+	glBegin(GL_QUADS);
+	glNormal3f(0, 1, 0);	// Set quad normal direction.
+	glTexCoord2f(0, 0);		// Set tex coordinates ( Using (0,0) -> (5,5) with texture wrapping set to GL_REPEAT to simulate the ground repeated grass texture).
+	glVertex3f(-20, 0, -20);
+	glTexCoord2f(5, 0);
+	glVertex3f(20, 0, -20);
+	glTexCoord2f(5, 5);
+	glVertex3f(20, 0, 20);
+	glTexCoord2f(0, 5);
+	glVertex3f(-20, 0, 20);
+	glEnd();
+	glPopMatrix();
+
+	glEnable(GL_LIGHTING);	// Enable lighting again for other entites coming throung the pipeline.
+
+	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
+}
+
+void renderCones() {
+    for (const auto& cone : cones) {
+        glPushMatrix();
+        glTranslatef(cone.x, cone.y, cone.z);
+        glScalef(1.0f, 1.0f, 1.0f);  // Adjust scale if needed
+        glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
+        coneModel.DrawModel();
+        glPopMatrix();
+    }
+}
+
+void renderText(float x, float y, const std::string& text) {
+    glRasterPos2f(x, y);
+    for (char c : text) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+}
+
+std::string formatSpeed(float speed) {
+    std::ostringstream oss;
+    oss << std::fixed << std::setprecision(1) << speed;
+    return oss.str();
+}
+
 
 void renderNitros() {
     for (const auto& nitro : nitros) {
@@ -1968,6 +2106,76 @@ void renderNitros() {
         nitroModel.DrawModel();
         glPopMatrix();
     }
+}
+
+void renderCar() {
+    // Update car model position and rotation
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);
+    //glScalef(1, 1, 1);
+    glRotatef(0, 0, 1, 0);
+    carModel1.DrawModel();
+    glPopMatrix();
+
+    // Offsets for the wheels relative to the car's position
+    float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
+    float wheelOffsetY = 0.5f; // Vertical offset below the car
+    float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
+    float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
+
+    // Draw back left wheel
+    glPushMatrix();
+    //glScalef(1, 1, 1); 
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+    glRotatef(180, 0, 1, 0);  // to face the right direction
+    redWheelsBackLeft1.DrawModel();
+    glPopMatrix();
+
+    // Draw back right wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+    //glScalef(0.5, 0.5, 0.5);
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+    glRotatef(0, 0, 1, 0);
+    redWheelsBackRight1.DrawModel();
+    glPopMatrix();
+
+    if (wheelRotationY > 52.5) {
+        wheelRotationY = 52.5;
+    }
+
+    if (wheelRotationY < -52.5) {
+        wheelRotationY = -52.5;
+    }
+
+
+    // Draw front left wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
+    //glScalef(0.5, 0.5, 0.5);
+    glRotatef(180 + wheelRotationY, 0, 1, 0);
+    glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    redWheelsFrontLeft1.DrawModel();
+    glPopMatrix();
+
+    // Draw front right wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
+    glRotatef(wheelRotationY, 0, 1, 0);
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    redWheelsFrontRight1.DrawModel();
+    glPopMatrix();
 }
 
 //=======================================================================
@@ -1990,123 +2198,27 @@ void myDisplay(void)
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
     glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
-    //// Draw Ground
-    //RenderGround();
-    // Draw Tree Model
+   
     glPushMatrix();
     glTranslatef(10, 0, 0);
     glScalef(0.7, 0.7, 0.7);
     model_tree.Draw();
     glPopMatrix();
-    // Draw house Model
-    //glPushMatrix();
-    //glRotatef(90.f, 1, 0, 0);
-    //model_house.Draw();
-    //glPopMatrix();
-    //trynna draw a bugatti
-    //glPushMatrix();
-    //glTranslatef(0, 0, 0);  // Position your model
-    //glScalef(0.3, 0.3, 0.3);  // Scale if needed
-    //glRotatef(90, 1, 0, 0);  // Rotate if needed
-    //model_bugatti.Draw();
-    //glPopMatrix();
-    //glPushMatrix();
-    //glTranslatef(0, 0, 0);  // Position your model
-    //glScalef(1.0, 1.0, 1.0);  // Scale if needed
-    //glRotatef(0, 1, 0, 0);  // Rotate if needed
-    //model_moscow.Draw();
-    //glPopMatrix();
-    // use tinygltf to draw gltf model
-    //glPushMatrix();
-    //glTranslatef(0, 0, 0);  // Position your model
-    //glScalef(0.09, 0.09, 0.09);  // Scale if needed
-    //glRotatef(0, 1, 0, 0);  // Rotate if needed
-    //GLTFModel::DrawModel(gltfModel, "models/test/scene.gltf");
-    //glPopMatrix();
-    // In your render function
+   
+    
     glPushMatrix();
     glTranslatef(0, 0, 0);  // Position your model
     glScalef(1, 1, 1);  // Scale if needed
     glRotatef(90, 0, 1, 0);  // Rotate if needed
     gltfModel1.DrawModel();
     glPopMatrix();
-    //glPushMatrix();
-    //glTranslatef(1, 1, 1);  // Position your model
-    //glScalef(0.5, 0.5, 0.5);  // Scale if needed
-    //glRotatef(180, 0, 1, 0);  // Rotate if needed
-    //nitroModel.DrawModel();
-    //glPopMatrix();
+#
+    
     renderCones();
 	renderNitros();
-    renderSpeedOMeter(carSpeed);
 
-	// Update car model position and rotation
-	glPushMatrix();
-	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);
-	//glScalef(1, 1, 1);
-	glRotatef(0, 0, 1, 0);
-	carModel1.DrawModel();
-	glPopMatrix();
-
-// Offsets for the wheels relative to the car's position
-	float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
-	float wheelOffsetY = 0.5f; // Vertical offset below the car
-	float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
-	float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
-
-	// Draw back left wheel
-	glPushMatrix();
-	//glScalef(1, 1, 1); 
-	glTranslatef(carPosition.x, carPosition.y , carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef( -wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
-
-	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
-	glRotatef(180, 0, 1, 0);  // to face the right direction
-	redWheelsBackLeft1.DrawModel();
-	glPopMatrix();
-
-	// Draw back right wheel
-	glPushMatrix();
-	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
-	//glScalef(0.5, 0.5, 0.5);
-	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
-	glRotatef(0, 0, 1, 0);
-	redWheelsBackRight1.DrawModel();
-	glPopMatrix();
-
-	if (wheelRotationY > 52.5) {
-		wheelRotationY = 52.5; 
-	}
-
-	if (wheelRotationY < -52.5) {
-		wheelRotationY = -52.5;
-	}
-
-
-	// Draw front left wheel
-	glPushMatrix();
-	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
-	//glScalef(0.5, 0.5, 0.5);
-	glRotatef(180 + wheelRotationY, 0, 1, 0);
-	glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-	redWheelsFrontLeft1.DrawModel();
-	glPopMatrix();
-
-	// Draw front right wheel
-	glPushMatrix();
-	glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-	glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-	glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
-	glRotatef(wheelRotationY,0, 1, 0);
-	glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-	redWheelsFrontRight1.DrawModel(); 
-	glPopMatrix();
+    renderCar();
+      setupLighting();
 
     if (sunVisibility > 0.0f) {
         glPushMatrix();
@@ -2123,6 +2235,7 @@ void myDisplay(void)
     glScalef(1.2, 1.2, 1.2);
     finishModel.DrawModel();
     glPopMatrix();
+
     // Draw skybox
     glPushMatrix();
     GLUquadricObj* qobj;
