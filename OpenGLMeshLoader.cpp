@@ -320,6 +320,22 @@ std::vector<Nitro> nitros = {
     Nitro(228.196, 1.5, -276.122, 0.0)
 };
 
+std::vector<Nitro> originalNitros = {
+    //Nitro(1,1,1),
+    Nitro(32.1886, 1.5, 113.886, 0.0),
+    Nitro(407.525, 1.5, 153.901, 0.0),
+    Nitro(228.196, 1.5, -276.122, 0.0),
+    Nitro(228.196, 1.5, -276.122, 0.0)
+};
+
+std::vector<Vector> barriers = {
+    Vector(-2.23767, 0, -106.795),
+    Vector(5.23767, 0, -106.795),
+    Vector(181.899, 0, 221.466),
+    Vector(181.899, 0, 226.466),
+    Vector(181.899, 0, 231.466)
+};
+
 Vector Eye(20, 5, 20);
 Vector At(0, 0, 0);
 Vector Up(0, 1, 0);
@@ -414,11 +430,16 @@ bool timerStarted = false;
 bool isColliding = false;
 bool isRespawning = false;
 float respawnTimer = 0.0f;
-float respawnDuration = 1.0f; // 3 seconds for the entire respawn process
+float respawnDuration = 1.2f; // 3 seconds for the entire respawn process
 float blinkInterval = 0.2f; 
 bool isCarVisible = true;
 float collisionRecoil = 0.0f;
 float recoilDuration = 1.5f; // 0.5 seconds of collision recoil
+bool isNitroActive = false;
+float nitroTimer = 0.0f;
+float nitroDuration = 3.0f; // 3 seconds of nitro boost
+float nitroSpeedMultiplier = 20;
+float lastSpeed = 0.0f;
 
 void setupLighting() {
     glEnable(GL_LIGHTING);
@@ -2563,10 +2584,36 @@ bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carP
     return false; // Car is not close to any vertex
 }
 
-bool checkCollisionWithCones(const Vector& carPosition, const std::vector<Cone>& cones, float collisionThreshold = 2.0f) {
+bool checkCollisionWithObstacles(const Vector& carPosition, float collisionThreshold = 2.0f) {
     for (const auto& cone : cones) {
         Vector conePosition(cone.x, cone.y, cone.z);
         if (carPosition.distanceToNoY(conePosition) <= collisionThreshold) {
+            return true; // Collision detected
+        }
+    }
+    for (const auto& barrier : barriers) {
+        if (carPosition.distanceToNoY(barrier) <= 4) {
+            return true; 
+        }
+    }
+    return false; // No collision
+}
+
+void activateNitro() {
+    if (!isNitroActive) {
+        isNitroActive = true;
+        lastSpeed = carSpeed;
+        nitroTimer = 0.0f;
+        carSpeed = carSpeed + nitroSpeedMultiplier;
+    }
+}
+
+bool checkCollisionWithNitros(Vector& carPosition, std::vector<Nitro>& nitros, float collisionThreshold = 2.0f) {
+    for (auto it = nitros.begin(); it != nitros.end(); ++it) {
+        Vector nitroPosition(it->x, it->y, it->z);
+        if (carPosition.distanceToNoY(nitroPosition) <= collisionThreshold) {
+            nitros.erase(it); // Remove the Nitro from the array
+            activateNitro(); // Activate nitro boost
             return true; // Collision detected
         }
     }
@@ -2614,6 +2661,15 @@ bool hasPassedFinishLine() {
 }
 
 void updateCarPosition(float deltaTime) {
+    if (isNitroActive) {
+        nitroTimer += deltaTime;
+        if (nitroTimer >= nitroDuration) {
+            isNitroActive = false;
+            nitroTimer = 0.0f;
+            carSpeed = lastSpeed;
+        }
+    }
+
     if (isRespawning) {
         respawnTimer += deltaTime;
 
@@ -2673,7 +2729,7 @@ void handleCarControls(float deltaTime) {
     // Accelerate
     if (isAccelerating) {
         carSpeed += acceleration * deltaTime;
-        if (carSpeed > maxSpeed) carSpeed = maxSpeed;
+        if (carSpeed > maxSpeed && !isNitroActive) carSpeed = maxSpeed;
     }
     // Brake/Reverse
     else if (isBraking) {
@@ -3407,21 +3463,21 @@ void renderGoRight() {
 void renderHorizontalBarrier() {
     // horizontal obstacle
     glPushMatrix();
-    glTranslatef(186.899, 0, 221.466);
+    glTranslatef(181.899, 0, 221.466);
     glRotatef(270, 0, 1, 0);
     glScalef(400, 400, 400);
     horizontalTraffic.DrawModel();
     glPopMatrix();
 
     glPushMatrix();
-    glTranslatef(186.899, 0, 226.466);
+    glTranslatef(181.899, 0, 226.466);
     glRotatef(270, 0, 1, 0);
     glScalef(400, 400, 400);
     horizontalTraffic.DrawModel();
     glPopMatrix();
 
     glPushMatrix();
-    glTranslatef(186.899, 0, 231.466);
+    glTranslatef(181.899, 0, 231.466);
     glRotatef(270, 0, 1, 0);
     glScalef(400, 400, 400);
     horizontalTraffic.DrawModel();
@@ -3439,7 +3495,7 @@ void myDisplay(void)
     lastTime = currentTime;
     handleCarControls(deltaTime);
     updateCarPosition(deltaTime);
-    if (checkCollisionWithCones(carPosition, cones)) {
+    if (checkCollisionWithObstacles(carPosition)) {
         carSpeed = 0;
         isColliding = true;
         applyCollisionRecoil(deltaTime);
@@ -3447,6 +3503,10 @@ void myDisplay(void)
     else {
 		isColliding = false;
     }
+	if (checkCollisionWithNitros(carPosition, nitros))
+	{
+        isNitroActive = true;
+	}
     updateSunPosition(deltaTime);
     updateNitroAnimation();
     //carPosition.print();
@@ -3457,11 +3517,11 @@ void myDisplay(void)
     glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
    
-    glPushMatrix();
+ /*   glPushMatrix();
     glTranslatef(10, 0, 0);
     glScalef(0.7, 0.7, 0.7);
     model_tree.Draw();
-    glPopMatrix();
+    glPopMatrix();*/
    
     
     glPushMatrix();
@@ -3530,6 +3590,7 @@ void myKeyboard(unsigned char button, int x, int y)
         {
 		if (button == 'r' || button == 'R')
 		{
+            nitros = originalNitros;
 			resetGame();
 		}
 		return;
@@ -3802,7 +3863,6 @@ void LoadAssets()
 //=======================================================================
 // Main Function
 //=======================================================================
-
 void timer(int value) {
 	glutPostRedisplay();
 	glutTimerFunc(16, timer, 0);
