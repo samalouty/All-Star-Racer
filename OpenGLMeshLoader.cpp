@@ -441,13 +441,14 @@ float nitroDuration = 3.0f; // 3 seconds of nitro boost
 float nitroSpeedMultiplier = 20;
 float lastSpeed = 0.0f;
 
+// Function to set up the headlights
 void setupLighting() {
     glEnable(GL_LIGHTING);
 
     // Headlight 1 (Right)
     glEnable(GL_LIGHT2);
-    glLightfv(GL_LIGHT2, GL_POSITION, headlight1_pos);     // Position
-    glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, headlight_dir); // Direction
+    //glLightfv(GL_LIGHT2, GL_POSITION, headlight1_pos);     // Position
+    //glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, headlight_dir); // Direction
     glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
     glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 10.0f);          // Intensity falloff
     GLfloat lightColor[] = { 1.0f, 1.0f, 0.8f, 1.0f };     // Warm white
@@ -456,10 +457,10 @@ void setupLighting() {
 
     // Headlight 2 (Left)
     glEnable(GL_LIGHT1);
-    glLightfv(GL_LIGHT1, GL_POSITION, headlight2_pos);     // Position
-    glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, headlight_dir); // Direction
-    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
-    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 10.0f);          // Intensity falloff
+    //glLightfv(GL_LIGHT1, GL_POSITION, headlight2_pos);     // Position
+    //glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, headlight_dir); // Direction
+    glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 20.0f);            // Cone angle
+    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 5.0f);          // Intensity falloff
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor);
     glLightfv(GL_LIGHT1, GL_SPECULAR, lightColor);
 }
@@ -3299,6 +3300,8 @@ void myInit(void)
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_NORMALIZE);
     glEnable(GL_TEXTURE_2D);
+    glEnable(GL_LIGHTING);
+    glEnable(GL_LIGHT0);
 }
 
 //=======================================================================
@@ -3372,15 +3375,31 @@ void renderNitros() {
 }
 
 void renderCar() {
-    if (!isRespawning || isCarVisible) {
-        // Update car model position and rotation
-        glPushMatrix();
-        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-        glRotatef(carRotation, 0, 1, 0);
-        //glScalef(1, 1, 1);
-        glRotatef(0, 0, 1, 0);
-        carModel1.DrawModel();
-        glPopMatrix();
+    // Update car model position and rotation
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);
+    //glScalef(1, 1, 1);
+    glRotatef(0, 0, 1, 0);
+    // Update headlight position and direction
+    headlight1_pos[0] = 2.0f;
+    headlight1_pos[1] = 0.5f;
+    headlight1_pos[2] = 1.0f;
+
+	headlight2_pos[0] = -2.0f;
+	headlight2_pos[1] = 0.5f;
+	headlight2_pos[2] = 1.0f;
+
+    headlight_dir[0] = 0.0f;
+    headlight_dir[1] = -0.1f;
+    headlight_dir[2] = 1.0f;
+
+    glLightfv(GL_LIGHT1, GL_POSITION, headlight1_pos);
+    glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, headlight_dir);
+    glLightfv(GL_LIGHT2, GL_POSITION, headlight2_pos);
+    glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, headlight_dir);
+    carModel1.DrawModel();
+    glPopMatrix();
 
         // Offsets for the wheels relative to the car's position
         float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
@@ -3441,6 +3460,56 @@ void renderCar() {
         redWheelsFrontRight1.DrawModel();
         glPopMatrix();
     }
+
+    if (wheelRotationY < -52.5) {
+        wheelRotationY = -52.5;
+    }
+
+
+    // Draw front left wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
+    //glScalef(0.5, 0.5, 0.5);
+    glRotatef(180 + wheelRotationY, 0, 1, 0);
+    glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    redWheelsFrontLeft1.DrawModel();
+    glPopMatrix();
+
+    // Draw front right wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
+    glRotatef(wheelRotationY, 0, 1, 0);
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    redWheelsFrontRight1.DrawModel();
+    glPopMatrix();
+
+ //   // Update headlight positions
+ //   glm::mat4 carTransform = glm::mat4(1.0f);
+ //   carTransform = glm::translate(carTransform, glm::vec3(carPosition.x, carPosition.y, carPosition.z));
+ //   carTransform = glm::rotate(carTransform, glm::radians(carRotation), glm::vec3(0, 1, 0));
+
+ //   glm::vec4 rightHeadlightPos = carTransform * glm::vec4(0.5f, 0.5f, -1.0f, 1.0f);
+ //   glm::vec4 leftHeadlightPos = carTransform * glm::vec4(-0.5f, 0.5f, -1.0f, 1.0f);
+
+ //   headlight1_pos[0] = rightHeadlightPos.x;
+ //   headlight1_pos[1] = rightHeadlightPos.y;
+ //   headlight1_pos[2] = rightHeadlightPos.z;
+	//printf("headlight1_pos: %f %f %f\n", headlight1_pos[0], headlight1_pos[1], headlight1_pos[2]);
+
+ //   headlight2_pos[0] = leftHeadlightPos.x;
+ //   headlight2_pos[1] = leftHeadlightPos.y;
+ //   headlight2_pos[2] = leftHeadlightPos.z;
+ //   printf("headlight2_pos: %f %f %f\n", headlight2_pos[0], headlight2_pos[1], headlight2_pos[2]);
+
+ //   // Update headlight direction
+ //   glm::vec4 headlightDir = carTransform * glm::vec4(0.0f, -0.1f, 1.0f, 0.0f);
+ //   headlight_dir[0] = headlightDir.x;
+ //   headlight_dir[1] = headlightDir.y;
+ //   headlight_dir[2] = headlightDir.z;
 }
 
 void renderGoRight() {
@@ -3516,8 +3585,22 @@ void myDisplay(void)
     glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
     glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+
+    // Draw skybox
+    glPushMatrix();
+    GLUquadricObj* qobj;
+    qobj = gluNewQuadric();
+    glTranslated(50, 0, 0);
+    glRotated(90, 1, 0, 1);
+    glBindTexture(GL_TEXTURE_2D, tex);
+    gluQuadricTexture(qobj, true);
+    gluQuadricNormals(qobj, GL_SMOOTH);
+    gluSphere(qobj, 1000, 100, 100);
+    gluDeleteQuadric(qobj);
+    glPopMatrix();
    
- /*   glPushMatrix();
+    setupLighting();
+    glPushMatrix();
     glTranslatef(10, 0, 0);
     glScalef(0.7, 0.7, 0.7);
     model_tree.Draw();
@@ -3536,7 +3619,6 @@ void myDisplay(void)
 	renderNitros();
 
     renderCar();
-      setupLighting();
 
     if (sunVisibility > 0.0f) {
         glPushMatrix();
@@ -3557,19 +3639,6 @@ void myDisplay(void)
     renderHorizontalBarrier(); 
 
 	renderGoRight();
-
-    // Draw skybox
-    glPushMatrix();
-    GLUquadricObj* qobj;
-    qobj = gluNewQuadric();
-    glTranslated(50, 0, 0);
-    glRotated(90, 1, 0, 1);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    gluQuadricTexture(qobj, true);
-    gluQuadricNormals(qobj, GL_SMOOTH);
-    gluSphere(qobj, 1000, 100, 100);
-    gluDeleteQuadric(qobj);
-    glPopMatrix();
 
     
     drawHUD();
@@ -3794,7 +3863,7 @@ void LoadAssets()
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
-	if (!gltfModel1.LoadModel("models/track3/scene.gltf")) {
+	if (!gltfModel1.LoadModel("models/track5/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
@@ -3901,6 +3970,8 @@ void main(int argc, char** argv)
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);  // Enable headlight 1
+    glEnable(GL_LIGHT2);
     glEnable(GL_NORMALIZE);
     glEnable(GL_COLOR_MATERIAL);
 
