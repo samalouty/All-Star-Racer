@@ -3300,8 +3300,6 @@ void myInit(void)
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_NORMALIZE);
     glEnable(GL_TEXTURE_2D);
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
 }
 
 //=======================================================================
@@ -3585,6 +3583,16 @@ void myDisplay(void)
     glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
     glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
 
+
+    if (sunVisibility > 0.0f) {
+        glPushMatrix();
+        glTranslatef(sunPosition.x, sunPosition.y, sunPosition.z);
+        glDisable(GL_LIGHTING);
+        glColor4f(sunColor.r, sunColor.g, sunColor.b, sunVisibility);
+        glEnable(GL_LIGHTING);
+        glPopMatrix();
+    }
+
     // Draw skybox
     glPushMatrix();
     GLUquadricObj* qobj;
@@ -3618,15 +3626,6 @@ void myDisplay(void)
 	renderNitros();
 
     renderCar();
-
-    if (sunVisibility > 0.0f) {
-        glPushMatrix();
-        glTranslatef(sunPosition.x, sunPosition.y, sunPosition.z);
-        glDisable(GL_LIGHTING);
-        glColor4f(sunColor.r, sunColor.g, sunColor.b, sunVisibility);
-        glEnable(GL_LIGHTING);
-        glPopMatrix();
-    }
     // Update car model position and rotation
     glPushMatrix();
     glTranslatef(112.226, 0, 226.23);
