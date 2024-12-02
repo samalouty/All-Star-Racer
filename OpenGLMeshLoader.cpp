@@ -2245,10 +2245,40 @@ void myDisplay(void)
     }
     // Update car model position and rotation
     glPushMatrix();
-    glTranslatef(112.226, 0, 235.23 - 9);
+    glTranslatef(112.226, 0, 226.23);
     glRotatef(270, 0, 1, 0);
     glScalef(1.2, 1.2, 1.2);
     finishModel.DrawModel();
+    glPopMatrix();
+
+    // horizontal obstacle
+    glPushMatrix();
+    glTranslatef(186.899, 0, 221.466);
+    glRotatef(270, 0, 1, 0);
+    glScalef(500, 500, 500);
+    horizontalTraffic.DrawModel();
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(186.899, 0, 226.466);
+    glRotatef(270, 0, 1, 0);
+    glScalef(500, 500, 500);
+    horizontalTraffic.DrawModel();
+    glPopMatrix();
+
+    // traffic obstacles
+    glPushMatrix();
+    glTranslatef(2.23767, 0, -106.795);
+    glRotatef(180, 0, 1, 0);
+    glScalef(300, 300, 300);
+    trafficObstacle.DrawModel();
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(-5.23767, 0, -106.795);
+    glRotatef(180, 0, 1, 0);
+    glScalef(300, 300, 300);
+    trafficObstacle.DrawModel();
     glPopMatrix();
 
     // Draw skybox
