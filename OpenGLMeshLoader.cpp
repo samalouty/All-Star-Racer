@@ -294,22 +294,22 @@ struct Nitro {
 };
 
 std::vector<Cone> cones = {
-    Cone(-1.35632f, 1.0f, 65.1768f),
-    Cone(108.473f, 1.0f, 139.522f),
-    Cone(195.703f, 1.0f, 204.171f),
-    Cone(278.372f, 1.0f, 257.79f),
-    Cone(378.248f, 1.0f, 293.617f),
-    Cone(420.81f, 1.0f, 160.304f),
-    Cone(351.948f, 1.0f, 77.5647f),
-    Cone(227.368f, 1.0f, -155.744f),
-    Cone(230.393f, 1.0f, -241.257f),
-    Cone(235.758f, 1.0f, -376.608f),
-    Cone(61.4926f, 1.0f, -358.944f),
-    Cone(-2.4635f, 1.0f, -263.153f),
-    Cone(-7.77166f, 1.0f, -119.751f),
-    Cone(-152.706f, 1.0f, -55.6917f),
-    Cone(-264.162f, 1.0f, 45.1598f),
-    Cone(-396.878f, 1.0f, 114.803f)
+    Cone(-1.35632f, 1.3f, 65.1768f),
+    Cone(108.473f, 1.3f, 139.522f),
+    Cone(195.703f, 1.3f, 204.171f),
+    Cone(278.372f, 1.3f, 257.79f),
+    Cone(378.248f, 1.3f, 293.617f),
+    Cone(420.81f, 1.3f, 160.304f),
+    Cone(351.948f, 1.3f, 77.5647f),
+    Cone(227.368f, 1.3f, -155.744f),
+    Cone(230.393f, 1.3f, -241.257f),
+    Cone(235.758f, 1.3f, -376.608f),
+    Cone(61.4926f, 1.3f, -358.944f),
+    Cone(-2.4635f, 1.3f, -263.153f),
+    Cone(-7.77166f, 1.3f, -119.751f),
+    Cone(-152.706f, 1.3f, -55.6917f),
+    Cone(-264.162f, 1.3f, 45.1598f),
+    Cone(-396.0f, 1.3f, 45.1598f) // Assuming the last value was cut off, added a placeholder value
 };
 
 std::vector<Nitro> nitros = {
@@ -339,7 +339,7 @@ GLTexture tex_ground;
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON };
 CameraView currentView = THIRD_PERSON;
 float thirdPersonDistance = 3.0f;
-Vector carPosition(0 ,0, 0);
+Vector carPosition(0, 0, 0);
 float carRotation = 0; // in degrees, 0 means facing negative z-axis
 //Vector(0.2, 0.61, -0.1)
 Vector cameraOffset(0.2, 1.11, -0.2);
@@ -381,7 +381,7 @@ float cameraHeight = 3.0f; // Height above the car
 float cameraLookAheadDistance = 10.0f; // How far ahead of the car to look
 
 float sunsetProgress = 0.0f;
-const float sunsetDuration = 120.0f; // 2 minutes in seconds
+const float sunsetDuration = 90.0f; // 2 minutes in seconds
 glm::vec3 morningSkyColor(0.678f, 0.847f, 0.902f); // Bright morning sky blue
 glm::vec3 noonSkyColor(0.529f, 0.808f, 0.922f); // Noon sky blue
 glm::vec3 sunsetSkyColor(0.698f, 0.502f, 0.569f); // Purplish pink sunset
@@ -411,7 +411,14 @@ float gameTimer = 90.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
 
-
+bool isColliding = false;
+bool isRespawning = false;
+float respawnTimer = 0.0f;
+float respawnDuration = 1.0f; // 3 seconds for the entire respawn process
+float blinkInterval = 0.2f; 
+bool isCarVisible = true;
+float collisionRecoil = 0.0f;
+float recoilDuration = 1.5f; // 0.5 seconds of collision recoil
 
 // Function to set up the headlights
 void setupLighting() {
@@ -451,6 +458,53 @@ struct Vertex {
 };
 
 std::vector<Vertex> trackVertices = {
+    {0.0f, 0.0f, -0.1458f},
+    {0.0f, 0.0f, -0.57015f},
+    {0.0f, 0.0f, -1.13135f},
+    {0.0f, 0.0f, -1.89395f},
+    {0.0f, 0.0f, -2.8303f},
+    {0.0f, 0.0f, -3.9742f},
+    {0.0f, 0.0f, -5.1942f},
+    {0.0f, 0.0f, -6.4342f},
+    {0.0f, 0.0f, -7.6742f},
+    {0.0f, 0.0f, -8.9342f},
+    {0.0f, 0.0f, -9.9742f},
+    {0.0f, 0.0f, -11.1142f},
+    {0.0, 0.0f, -22.5767f},
+    {0, 0, -34.2791f},
+    {0, 0, -45.5523f},
+    {0, 0, -56.8534f},
+    {0, 0 , -67},
+    {0, 0 , -78},
+    {0, 0 , -89},
+    {0, 0, -100},
+    {0, 0, -111},
+    {0.0f, 0.0f, -116.163f},
+    {0.0f, 0.0f, -117.423f},
+    {0.0f, 0.0f, -118.703f},
+    {0.0f, 0.0f, -119.64f},
+    {0.0f, 0.0f, -120.644f},
+    {0.0f, 0.0f, -121.634f},
+    {0.0f, 0.0f, -122.513f},
+    {0.0f, 0.0f, -123.318f},
+    {0.0f, 0.0f, -124.001f},
+    {0.0f, 0.0f, -124.573f},
+    {0.0f, 0.0f, -125.203f},
+    {0.0f, 0.0f, -126.039f},
+    {0.0f, 0.0f, -127.136f},
+    {0.0f, 0.0f, -128.336f},
+    {0.0f, 0.0f, -129.395f},
+    {0.0f, 0.0f, -130.557f},
+    {0.0f, 0.0f, -131.492f},
+    {0.0f, 0.0f, -132.334f},
+    {0.0f, 0.0f, -133.083f},
+    {0.0f, 0.0f, -133.738f},
+    {0.0f, 0.0f, -134.301f},
+    {0.0f, 0.0f, -134.777f},
+    {0.0f, 0.0f, -135.157f},
+    {0.0f, 0.0f, -135.443f},
+    {0.0f, 0.0f, -135.628f},
+    {0.0f, 0.0f, -135.719f},
     {0.0f, 0.0f, 0.0f},
     {0.0f, 0.0f, 0.016641f},
     {0.0f, 0.0f, 0.059787f},
@@ -2479,45 +2533,15 @@ std::vector<Vertex> trackVertices = {
     {111.532f, 0.0f, 225.084f},
     {111.545f, 0.0f, 225.085f},
     {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f},
-    {111.545f, 0.0f, 225.085f}
+    {123.386, 0, 225.572 }, 
+    {133.439, 0, 224.257 }, 
+    {143, 0, 225}, 
+    { 153, 0, 225 },
+    { 163, 0, 225 },
+    { 173, 0, 225 },
+    { 183, 0, 225 },
+    {198.964, 0, 225.877}
+
 };
 
 bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carPosition, float threshold = 12.0f) {
@@ -2540,6 +2564,42 @@ bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carP
     return false; // Car is not close to any vertex
 }
 
+bool checkCollisionWithCones(const Vector& carPosition, const std::vector<Cone>& cones, float collisionThreshold = 2.0f) {
+    for (const auto& cone : cones) {
+        Vector conePosition(cone.x, cone.y, cone.z);
+        if (carPosition.distanceToNoY(conePosition) <= collisionThreshold) {
+            return true; // Collision detected
+        }
+    }
+    return false; // No collision
+}
+
+void startRespawn() {
+    isRespawning = true;
+    respawnTimer = 0.0f;
+}
+
+void updateCollisionRecoil(float deltaTime) {
+    float radians = carRotation * M_PI / 180.0f;
+    while (!(collisionRecoil <= 0)) {
+        carPosition.x -= sin(radians) * 4.0f * deltaTime;
+        carPosition.z -= cos(radians) * 4.0f * deltaTime;
+        collisionRecoil -= deltaTime / 2;
+    }
+    if (collisionRecoil <= 0) {
+        collisionRecoil = 0.0f;
+         isColliding = false;
+         startRespawn();
+    }
+}
+
+void applyCollisionRecoil(float deltaTime) {
+    isColliding = true;
+    carSpeed = 0.0f;
+    collisionRecoil = recoilDuration;
+    updateCollisionRecoil(deltaTime);
+}
+
 //=======================================================================
 // Car Motion Functions
 //=======================================================================
@@ -2555,6 +2615,21 @@ bool hasPassedFinishLine() {
 }
 
 void updateCarPosition(float deltaTime) {
+    if (isRespawning) {
+        respawnTimer += deltaTime;
+
+        // Blink the car
+        isCarVisible = (static_cast<int>(respawnTimer / blinkInterval) % 2 == 0);
+
+        // End respawn after 3 seconds
+        if (respawnTimer >= respawnDuration) {
+            isRespawning = false;
+            respawnTimer = 0.0f;
+            isCarVisible = true;
+        }
+        return;
+    }
+
     float radians = carRotation * M_PI / 180.0;
     if (gravityEnabled) {
         carPosition.y -= 9.8065 * deltaTime;
@@ -2631,9 +2706,6 @@ void handleCarControls(float deltaTime) {
     while (carRotation >= 360.0f) carRotation -= 360.0f;
     while (carRotation < 0.0f) carRotation += 360.0f;
 }
-
-
-
 
 //=======================================================================
 // Lighting Configuration Function
@@ -2842,7 +2914,6 @@ void drawGameOverText() {
     glEnable(GL_TEXTURE_2D);
 }
 
-
 void renderSpeedOMeter(float speed) {
     const float centerX = 1100.0f;  // Center of the speedometer (X position)
     const float centerY = 100.0f;  // Center of the speedometer (Y position)
@@ -2968,7 +3039,6 @@ void renderSpeedOMeter(float speed) {
     glPopMatrix();
 }
 
-// Function to draw a rounded rectangle
 void drawRoundedRect(float x, float y, float width, float height, float radius) {
     int segments = 20;
     glBegin(GL_POLYGON);
@@ -3028,6 +3098,7 @@ void drawRoundedRectOutline(float x, float y, float width, float height, float r
     }
     glEnd();
 }
+
 void drawHUD() {
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -3117,13 +3188,9 @@ void drawHUD() {
     glPopMatrix();
 }
 
-
-
-
 //=======================================================================
 // Game Over Screen
 //======================================================================
-
 void resetGame() {
     gravityEnabled = false;
     gameOver = false;
@@ -3138,8 +3205,6 @@ void resetGame() {
     playerTime = 0.0f;
 
 }
-
-
 
 //=======================================================================
 // Material Configuration Function
@@ -3239,7 +3304,6 @@ std::string formatSpeed(float speed) {
     return oss.str();
 }
 
-
 void renderNitros() {
     for (const auto& nitro : nitros) {
         float rotation = -nitro.animationPhase * 45;
@@ -3281,37 +3345,64 @@ void renderCar() {
     carModel1.DrawModel();
     glPopMatrix();
 
-    // Offsets for the wheels relative to the car's position
-    float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
-    float wheelOffsetY = 0.5f; // Vertical offset below the car
-    float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
-    float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
+        // Offsets for the wheels relative to the car's position
+        float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
+        float wheelOffsetY = 0.5f; // Vertical offset below the car
+        float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
+        float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
 
-    // Draw back left wheel
-    glPushMatrix();
-    //glScalef(1, 1, 1); 
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+        // Draw back left wheel
+        glPushMatrix();
+        //glScalef(1, 1, 1); 
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+        glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
 
-    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
-    glRotatef(180, 0, 1, 0);  // to face the right direction
-    redWheelsBackLeft1.DrawModel();
-    glPopMatrix();
+        glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+        glRotatef(180, 0, 1, 0);  // to face the right direction
+        redWheelsBackLeft1.DrawModel();
+        glPopMatrix();
 
-    // Draw back right wheel
-    glPushMatrix();
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
-    //glScalef(0.5, 0.5, 0.5);
-    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
-    glRotatef(0, 0, 1, 0);
-    redWheelsBackRight1.DrawModel();
-    glPopMatrix();
+        // Draw back right wheel
+        glPushMatrix();
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+        glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+        //glScalef(0.5, 0.5, 0.5);
+        glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+        glRotatef(0, 0, 1, 0);
+        redWheelsBackRight1.DrawModel();
+        glPopMatrix();
 
-    if (wheelRotationY > 52.5) {
-        wheelRotationY = 52.5;
+        if (wheelRotationY > 52.5) {
+            wheelRotationY = 52.5;
+        }
+
+        if (wheelRotationY < -52.5) {
+            wheelRotationY = -52.5;
+        }
+
+
+        // Draw front left wheel
+        glPushMatrix();
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+        glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
+        //glScalef(0.5, 0.5, 0.5);
+        glRotatef(180 + wheelRotationY, 0, 1, 0);
+        glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+        redWheelsFrontLeft1.DrawModel();
+        glPopMatrix();
+
+        // Draw front right wheel
+        glPushMatrix();
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+        glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
+        glRotatef(wheelRotationY, 0, 1, 0);
+        glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+        redWheelsFrontRight1.DrawModel();
+        glPopMatrix();
     }
 
     if (wheelRotationY < -52.5) {
@@ -3417,6 +3508,14 @@ void myDisplay(void)
     lastTime = currentTime;
     handleCarControls(deltaTime);
     updateCarPosition(deltaTime);
+    if (checkCollisionWithCones(carPosition, cones)) {
+        carSpeed = 0;
+        isColliding = true;
+        applyCollisionRecoil(deltaTime);
+    }
+    else {
+		isColliding = false;
+    }
     updateSunPosition(deltaTime);
     updateNitroAnimation();
     //carPosition.print();
@@ -3488,12 +3587,14 @@ void myDisplay(void)
     glutSwapBuffers();
 }
 
-
 //=======================================================================
 // Keyboard Function
 //=======================================================================
 void myKeyboard(unsigned char button, int x, int y)
 {
+    if (isRespawning || collisionRecoil > 0) {
+        return;
+    }
     if(gameOver || gameWon)
         {
 		if (button == 'r' || button == 'R')
@@ -3573,24 +3674,26 @@ void myKeyboard(unsigned char button, int x, int y)
 
 void specialKeyboard(int key, int x, int y)
 {
-    if (gameOver || gameWon) {
+    if (gameOver || gameWon || isRespawning || collisionRecoil > 0) {
         return;
     }
 
     switch (key)
     {
     case GLUT_KEY_LEFT:
-        wheelRotationY += 15.0f;
+        if(!isColliding) wheelRotationY += 15.0f;
         break;
     case GLUT_KEY_RIGHT:
-        wheelRotationY -= 15.0f;
+        if (!isColliding) wheelRotationY -= 15.0f;
         break;
     case GLUT_KEY_UP:
-        wheelRotationX += 6.0f;
-        isAccelerating = true;
-        isBraking = false;
-        if (!timerStarted) {
-            timerStarted = true;
+        if (!isColliding) {
+            wheelRotationX += 6.0f;
+            isAccelerating = true;
+            isBraking = false;
+            if (!timerStarted) {
+                timerStarted = true;
+            }
         }
         break;
     case GLUT_KEY_DOWN:
@@ -3601,7 +3704,6 @@ void specialKeyboard(int key, int x, int y)
     }
     glutPostRedisplay();
 }
-
 
 void specialKeyboardUp(int key, int x, int y)
 {
