@@ -352,8 +352,8 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON };
-CameraView currentView = THIRD_PERSON;
+enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
+CameraView currentView = CINEMATIC;
 float thirdPersonDistance = 3.0f;
 Vector carPosition(0, 0, 0);
 float carRotation = 0; // in degrees, 0 means facing negative z-axis
@@ -479,6 +479,7 @@ struct Vertex {
 };
 
 std::vector<Vertex> trackVertices = {
+    {76.6958, 0, 127.19},
     {0.0f, 0.0f, -0.1458f},
     {0.0f, 0.0f, -0.57015f},
     {0.0f, 0.0f, -1.13135f},
@@ -2845,9 +2846,94 @@ void updateSunPosition(float deltaTime) {
 //=======================================================================
 // Camera Function
 //=======================================================================
+
+void endCinematicMode()
+{
+    if (currentView == CINEMATIC)
+    {
+        currentView = THIRD_PERSON;
+        // Reset car position and other game start parameters if needed
+        carPosition = Vector(0, 0, 0);
+        carRotation = 0;
+        carSpeed = 0;
+        // Add any other necessary game start initializations here
+    }
+}
+
+// cinematic points 
+
+std::vector<Vector> cinematicPoints = {
+    Vector(106.284, 20, 500.741),
+    Vector(0.261323, 20, -158.15),
+    Vector(243.843, 20, 600.5731),
+    Vector(1.5, 0.4, -3),
+    // Add more points as needed
+};
+const float POINT_DISPLAY_DURATION = 2.0f;
+const float FINAL_POINT_DURATION = 2.0f; // Duration for final point
+const float FINAL_POINT_RADIUS = 10.0f; // Radius for the final point
+int currentCinematicPoint = 0;
+float cinematicTimer = 0;
+const float CINEMATIC_DURATION = 7.0f;
+
 void updateCamera()
 {
-    if (gameOver) {
+
+    if (currentView == CINEMATIC) {
+        // Check if we're at the final point
+        if (currentCinematicPoint == cinematicPoints.size() - 1) {
+            float t = cinematicTimer / FINAL_POINT_DURATION;
+            Vector current = cinematicPoints[currentCinematicPoint];
+
+            // Move the camera backwards continuously from the current point
+            Eye.x = current.x;
+            Eye.y = current.y;
+            Eye.z = current.z - t * FINAL_POINT_RADIUS; // Continuously move away from the point
+            At = current;
+
+            // Update timer
+            cinematicTimer += 0.016; // Assuming 60 FPS
+
+            // Move to the next point after the display duration
+            if (cinematicTimer >= FINAL_POINT_DURATION) {
+                cinematicTimer = 0;
+                currentCinematicPoint = 0; // Reset to the first point
+                currentView = THIRD_PERSON;
+            }
+        }
+        else {
+            // Cinematic camera movement for other points
+            float t = cinematicTimer / CINEMATIC_DURATION;
+            int nextPoint = (currentCinematicPoint + 1) % cinematicPoints.size();
+            Vector current = cinematicPoints[currentCinematicPoint];
+            Vector next = cinematicPoints[nextPoint];
+
+            // Interpolate between current and next point
+            Eye.x = current.x + (next.x - current.x) * t;
+            Eye.y = current.y + (next.y - current.y) * t;
+            Eye.z = current.z + (next.z - current.z) * t;
+
+            // Look at the next point
+            At = next;
+
+            // Update timer and current point
+            cinematicTimer += 0.016; // Assuming 60 FPS
+            if (cinematicTimer >= CINEMATIC_DURATION / cinematicPoints.size()) {
+                cinematicTimer = 0;
+                currentCinematicPoint = nextPoint;
+            }
+
+            // If cinematic is complete, switch to third person view
+            if (currentCinematicPoint == 0 && cinematicTimer == 0) {
+                currentView = THIRD_PERSON;
+            }
+        }
+    }
+
+
+
+
+    else if (gameOver) {
         Eye = Vector(lastCarPosition.x, lastCarPosition.y + 5.0f, lastCarPosition.z + 10.0f);
         At = Vector(carPosition.x, 0, carPosition.z);
 	}
@@ -2971,6 +3057,10 @@ void drawGameOverText() {
 }
 
 void renderSpeedOMeter(float speed) {
+
+    if (currentView == CINEMATIC) {
+       return;
+    }
     const float centerX = 1100.0f;  // Center of the speedometer (X position)
     const float centerY = 100.0f;  // Center of the speedometer (Y position)
     const float radius = 80.0f;    // Radius of the speedometer
@@ -3156,6 +3246,33 @@ void drawRoundedRectOutline(float x, float y, float width, float height, float r
 }
 
 void drawHUD() {
+
+    if (currentView == CINEMATIC)
+    {
+        glMatrixMode(GL_PROJECTION);
+        glPushMatrix();
+        glLoadIdentity();
+        gluOrtho2D(0, WIDTH, 0, HEIGHT);
+
+        glMatrixMode(GL_MODELVIEW);
+        glPushMatrix();
+        glLoadIdentity();
+
+        glColor3f(0.0f, 0.0f, 0.0f);  // White color for text
+        glRasterPos2i(WIDTH / 2 - 70, HEIGHT - 50);
+
+        const char* text = "Press Enter to Start";
+        for (const char* c = text; *c != '\0'; c++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+        }
+
+        glMatrixMode(GL_PROJECTION);
+        glPopMatrix();
+        glMatrixMode(GL_MODELVIEW);
+        glPopMatrix();
+        return; 
+    }
+
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
     glLoadIdentity();
@@ -3204,6 +3321,8 @@ void drawHUD() {
         << std::setfill('0') << std::setw(2) << milliseconds;
 
     std::string timerText = oss.str();
+
+
 
     // Draw digital time text
     glColor3f(0.0f, 1.0f, 0.0f); // Bright green for digital display
@@ -3722,6 +3841,10 @@ void myKeyboard(unsigned char button, int x, int y)
 	//	else if (currentView == THIRD_PERSON)
 	//		thirdPersonPitch -= cameraRotationSpeed;
 	//	break;
+    case 13:
+    // Enter key
+		endCinematicMode();
+		break;
 	case 27:
 		exit(0);
 		break;
@@ -3733,7 +3856,7 @@ void myKeyboard(unsigned char button, int x, int y)
 
 void specialKeyboard(int key, int x, int y)
 {
-    if (gameOver || gameWon || isRespawning || collisionRecoil > 0) {
+    if (gameOver || gameWon || isRespawning || collisionRecoil > 0 || currentView == CINEMATIC) {
         return;
     }
 
