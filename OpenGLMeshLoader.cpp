@@ -295,21 +295,21 @@ struct Nitro {
 
 std::vector<Cone> cones = {
     Cone(-1.35632f, 1.3f, 65.1768f),
-    Cone(108.473f, 1.0f, 139.522f),
-    Cone(195.703f, 1.0f, 204.171f),
-    Cone(278.372f, 1.0f, 257.79f),
-    Cone(378.248f, 1.0f, 293.617f),
-    Cone(420.81f, 1.0f, 160.304f),
-    Cone(351.948f, 1.0f, 77.5647f),
-    Cone(227.368f, 1.0f, -155.744f),
-    Cone(230.393f, 1.0f, -241.257f),
-    Cone(235.758f, 1.0f, -376.608f),
-    Cone(61.4926f, 1.0f, -358.944f),
-    Cone(-2.4635f, 1.0f, -263.153f),
-    Cone(-7.77166f, 1.0f, -119.751f),
-    Cone(-152.706f, 1.0f, -55.6917f),
-    Cone(-264.162f, 1.0f, 45.1598f),
-    Cone(-396.878f, 1.0f, 114.803f)
+    Cone(108.473f, 1.3f, 139.522f),
+    Cone(195.703f, 1.3f, 204.171f),
+    Cone(278.372f, 1.3f, 257.79f),
+    Cone(378.248f, 1.3f, 293.617f),
+    Cone(420.81f, 1.3f, 160.304f),
+    Cone(351.948f, 1.3f, 77.5647f),
+    Cone(227.368f, 1.3f, -155.744f),
+    Cone(230.393f, 1.3f, -241.257f),
+    Cone(235.758f, 1.3f, -376.608f),
+    Cone(61.4926f, 1.3f, -358.944f),
+    Cone(-2.4635f, 1.3f, -263.153f),
+    Cone(-7.77166f, 1.3f, -119.751f),
+    Cone(-152.706f, 1.3f, -55.6917f),
+    Cone(-264.162f, 1.3f, 45.1598f),
+    Cone(-396.0f, 1.3f, 45.1598f) // Assuming the last value was cut off, added a placeholder value
 };
 
 std::vector<Nitro> nitros = {
@@ -410,7 +410,15 @@ bool gameWon = false;
 float gameTimer = 90.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
+
 bool isColliding = false;
+bool isRespawning = false;
+float respawnTimer = 0.0f;
+float respawnDuration = 1.0f; // 3 seconds for the entire respawn process
+float blinkInterval = 0.2f; 
+bool isCarVisible = true;
+float collisionRecoil = 0.0f;
+float recoilDuration = 1.5f; // 0.5 seconds of collision recoil
 
 void setupLighting() {
     glEnable(GL_LIGHTING);
@@ -1420,6 +1428,32 @@ bool checkCollisionWithCones(const Vector& carPosition, const std::vector<Cone>&
     return false; // No collision
 }
 
+void startRespawn() {
+    isRespawning = true;
+    respawnTimer = 0.0f;
+}
+
+void updateCollisionRecoil(float deltaTime) {
+    float radians = carRotation * M_PI / 180.0f;
+    while (!(collisionRecoil <= 0)) {
+        carPosition.x -= sin(radians) * 4.0f * deltaTime;
+        carPosition.z -= cos(radians) * 4.0f * deltaTime;
+        collisionRecoil -= deltaTime / 2;
+    }
+    if (collisionRecoil <= 0) {
+        collisionRecoil = 0.0f;
+         isColliding = false;
+         startRespawn();
+    }
+}
+
+void applyCollisionRecoil(float deltaTime) {
+    isColliding = true;
+    carSpeed = 0.0f;
+    collisionRecoil = recoilDuration;
+    updateCollisionRecoil(deltaTime);
+}
+
 //=======================================================================
 // Car Motion Functions
 //=======================================================================
@@ -1435,6 +1469,21 @@ bool hasPassedFinishLine() {
 }
 
 void updateCarPosition(float deltaTime) {
+    if (isRespawning) {
+        respawnTimer += deltaTime;
+
+        // Blink the car
+        isCarVisible = (static_cast<int>(respawnTimer / blinkInterval) % 2 == 0);
+
+        // End respawn after 3 seconds
+        if (respawnTimer >= respawnDuration) {
+            isRespawning = false;
+            respawnTimer = 0.0f;
+            isCarVisible = true;
+        }
+        return;
+    }
+
     float radians = carRotation * M_PI / 180.0;
     if (gravityEnabled) {
         carPosition.y -= 9.8065 * deltaTime;
@@ -2122,73 +2171,75 @@ void renderNitros() {
 }
 
 void renderCar() {
-    // Update car model position and rotation
-    glPushMatrix();
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);
-    //glScalef(1, 1, 1);
-    glRotatef(0, 0, 1, 0);
-    carModel1.DrawModel();
-    glPopMatrix();
+    if (!isRespawning || isCarVisible) {
+        // Update car model position and rotation
+        glPushMatrix();
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);
+        //glScalef(1, 1, 1);
+        glRotatef(0, 0, 1, 0);
+        carModel1.DrawModel();
+        glPopMatrix();
 
-    // Offsets for the wheels relative to the car's position
-    float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
-    float wheelOffsetY = 0.5f; // Vertical offset below the car
-    float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
-    float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
+        // Offsets for the wheels relative to the car's position
+        float wheelOffsetX = -1.15f; // Horizontal offset from the car's center
+        float wheelOffsetY = 0.5f; // Vertical offset below the car
+        float wheelOffsetZFront = -1.7f; // Forward offset for front wheels
+        float wheelOffsetZBack = 1.7f; // Backward offset for back wheels
 
-    // Draw back left wheel
-    glPushMatrix();
-    //glScalef(1, 1, 1); 
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+        // Draw back left wheel
+        glPushMatrix();
+        //glScalef(1, 1, 1); 
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+        glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
 
-    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
-    glRotatef(180, 0, 1, 0);  // to face the right direction
-    redWheelsBackLeft1.DrawModel();
-    glPopMatrix();
+        glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+        glRotatef(180, 0, 1, 0);  // to face the right direction
+        redWheelsBackLeft1.DrawModel();
+        glPopMatrix();
 
-    // Draw back right wheel
-    glPushMatrix();
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
-    //glScalef(0.5, 0.5, 0.5);
-    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
-    glRotatef(0, 0, 1, 0);
-    redWheelsBackRight1.DrawModel();
-    glPopMatrix();
+        // Draw back right wheel
+        glPushMatrix();
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+        glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+        //glScalef(0.5, 0.5, 0.5);
+        glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+        glRotatef(0, 0, 1, 0);
+        redWheelsBackRight1.DrawModel();
+        glPopMatrix();
 
-    if (wheelRotationY > 52.5) {
-        wheelRotationY = 52.5;
+        if (wheelRotationY > 52.5) {
+            wheelRotationY = 52.5;
+        }
+
+        if (wheelRotationY < -52.5) {
+            wheelRotationY = -52.5;
+        }
+
+
+        // Draw front left wheel
+        glPushMatrix();
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+        glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
+        //glScalef(0.5, 0.5, 0.5);
+        glRotatef(180 + wheelRotationY, 0, 1, 0);
+        glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+        redWheelsFrontLeft1.DrawModel();
+        glPopMatrix();
+
+        // Draw front right wheel
+        glPushMatrix();
+        glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+        glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+        glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
+        glRotatef(wheelRotationY, 0, 1, 0);
+        glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+        redWheelsFrontRight1.DrawModel();
+        glPopMatrix();
     }
-
-    if (wheelRotationY < -52.5) {
-        wheelRotationY = -52.5;
-    }
-
-
-    // Draw front left wheel
-    glPushMatrix();
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
-    //glScalef(0.5, 0.5, 0.5);
-    glRotatef(180 + wheelRotationY, 0, 1, 0);
-    glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-    redWheelsFrontLeft1.DrawModel();
-    glPopMatrix();
-
-    // Draw front right wheel
-    glPushMatrix();
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
-    glRotatef(wheelRotationY, 0, 1, 0);
-    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-    redWheelsFrontRight1.DrawModel();
-    glPopMatrix();
 }
 
 void renderGoRight() {
@@ -2246,6 +2297,7 @@ void myDisplay(void)
     if (checkCollisionWithCones(carPosition, cones)) {
         carSpeed = 0;
         isColliding = true;
+        applyCollisionRecoil(deltaTime);
     }
     else {
 		isColliding = false;
@@ -2326,6 +2378,9 @@ void myDisplay(void)
 //=======================================================================
 void myKeyboard(unsigned char button, int x, int y)
 {
+    if (isRespawning || collisionRecoil > 0) {
+        return;
+    }
     if(gameOver || gameWon)
         {
 		if (button == 'r' || button == 'R')
@@ -2405,7 +2460,7 @@ void myKeyboard(unsigned char button, int x, int y)
 
 void specialKeyboard(int key, int x, int y)
 {
-    if (gameOver || gameWon) {
+    if (gameOver || gameWon || isRespawning || collisionRecoil > 0) {
         return;
     }
 
