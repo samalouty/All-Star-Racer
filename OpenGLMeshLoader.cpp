@@ -294,7 +294,7 @@ struct Nitro {
 };
 
 std::vector<Cone> cones = {
-    Cone(-1.35632f, 1.0f, 65.1768f),
+    Cone(-1.35632f, 1.3f, 65.1768f),
     Cone(108.473f, 1.0f, 139.522f),
     Cone(195.703f, 1.0f, 204.171f),
     Cone(278.372f, 1.0f, 257.79f),
@@ -381,7 +381,7 @@ float cameraHeight = 3.0f; // Height above the car
 float cameraLookAheadDistance = 10.0f; // How far ahead of the car to look
 
 float sunsetProgress = 0.0f;
-const float sunsetDuration = 120.0f; // 2 minutes in seconds
+const float sunsetDuration = 90.0f; // 2 minutes in seconds
 glm::vec3 morningSkyColor(0.678f, 0.847f, 0.902f); // Bright morning sky blue
 glm::vec3 noonSkyColor(0.529f, 0.808f, 0.922f); // Noon sky blue
 glm::vec3 sunsetSkyColor(0.698f, 0.502f, 0.569f); // Purplish pink sunset
@@ -410,8 +410,7 @@ bool gameWon = false;
 float gameTimer = 900.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
-
-
+bool isColliding = false;
 
 void setupLighting() {
     glEnable(GL_LIGHTING);
@@ -1411,6 +1410,16 @@ bool isPointInTrack(const std::vector<Vertex>& trackVertices, const Vector& carP
     return false; // Car is not close to any vertex
 }
 
+bool checkCollisionWithCones(const Vector& carPosition, const std::vector<Cone>& cones, float collisionThreshold = 2.0f) {
+    for (const auto& cone : cones) {
+        Vector conePosition(cone.x, cone.y, cone.z);
+        if (carPosition.distanceToNoY(conePosition) <= collisionThreshold) {
+            return true; // Collision detected
+        }
+    }
+    return false; // No collision
+}
+
 //=======================================================================
 // Car Motion Functions
 //=======================================================================
@@ -1502,9 +1511,6 @@ void handleCarControls(float deltaTime) {
     while (carRotation >= 360.0f) carRotation -= 360.0f;
     while (carRotation < 0.0f) carRotation += 360.0f;
 }
-
-
-
 
 //=======================================================================
 // Lighting Configuration Function
@@ -1713,7 +1719,6 @@ void drawGameOverText() {
     glEnable(GL_TEXTURE_2D);
 }
 
-
 void renderSpeedOMeter(float speed) {
     const float centerX = 1100.0f;  // Center of the speedometer (X position)
     const float centerY = 100.0f;  // Center of the speedometer (Y position)
@@ -1839,7 +1844,6 @@ void renderSpeedOMeter(float speed) {
     glPopMatrix();
 }
 
-// Function to draw a rounded rectangle
 void drawRoundedRect(float x, float y, float width, float height, float radius) {
     int segments = 20;
     glBegin(GL_POLYGON);
@@ -1899,6 +1903,7 @@ void drawRoundedRectOutline(float x, float y, float width, float height, float r
     }
     glEnd();
 }
+
 void drawHUD() {
     glMatrixMode(GL_PROJECTION);
     glPushMatrix();
@@ -1988,13 +1993,9 @@ void drawHUD() {
     glPopMatrix();
 }
 
-
-
-
 //=======================================================================
 // Game Over Screen
 //======================================================================
-
 void resetGame() {
     gravityEnabled = false;
     gameOver = false;
@@ -2009,8 +2010,6 @@ void resetGame() {
     playerTime = 0.0f;
 
 }
-
-
 
 //=======================================================================
 // Material Configuration Function
@@ -2108,7 +2107,6 @@ std::string formatSpeed(float speed) {
     return oss.str();
 }
 
-
 void renderNitros() {
     for (const auto& nitro : nitros) {
         float rotation = -nitro.animationPhase * 45;
@@ -2204,6 +2202,13 @@ void myDisplay(void)
     lastTime = currentTime;
     handleCarControls(deltaTime);
     updateCarPosition(deltaTime);
+    if (checkCollisionWithCones(carPosition, cones)) {
+        carSpeed = 0;
+        isColliding = true;
+    }
+    else {
+		isColliding = false;
+    }
     updateSunPosition(deltaTime);
     updateNitroAnimation();
     carPosition.print();
@@ -2301,7 +2306,6 @@ void myDisplay(void)
     glutSwapBuffers();
 }
 
-
 //=======================================================================
 // Keyboard Function
 //=======================================================================
@@ -2393,17 +2397,19 @@ void specialKeyboard(int key, int x, int y)
     switch (key)
     {
     case GLUT_KEY_LEFT:
-        wheelRotationY += 15.0f;
+        if(!isColliding) wheelRotationY += 15.0f;
         break;
     case GLUT_KEY_RIGHT:
-        wheelRotationY -= 15.0f;
+        if (!isColliding) wheelRotationY -= 15.0f;
         break;
     case GLUT_KEY_UP:
-        wheelRotationX += 6.0f;
-        isAccelerating = true;
-        isBraking = false;
-        if (!timerStarted) {
-            timerStarted = true;
+        if (!isColliding) {
+            wheelRotationX += 6.0f;
+            isAccelerating = true;
+            isBraking = false;
+            if (!timerStarted) {
+                timerStarted = true;
+            }
         }
         break;
     case GLUT_KEY_DOWN:
@@ -2414,7 +2420,6 @@ void specialKeyboard(int key, int x, int y)
     }
     glutPostRedisplay();
 }
-
 
 void specialKeyboardUp(int key, int x, int y)
 {
