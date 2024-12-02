@@ -407,7 +407,7 @@ GLfloat headlight_dir[] = { 0.0f, 0.0f, -1.0f };        // Direction of headligh
 bool gameOver = false;
 Vector lastCarPosition(0, 0, 0);
 bool gameWon = false;
-float gameTimer = 900.0f; // 90 seconds timer
+float gameTimer = 90.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
 
@@ -2193,6 +2193,47 @@ void renderCar() {
     glPopMatrix();
 }
 
+void renderGoRight() {
+    // traffic obstacles
+    glPushMatrix();
+    glTranslatef(5.23767, 0, -106.795);
+    glRotatef(180, 0, 1, 0);
+    glScalef(300, 300, 300);
+    trafficObstacle.DrawModel();
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(-2.23767, 0, -106.795);
+    glRotatef(180, 0, 1, 0);
+    glScalef(300, 300, 300);
+    trafficObstacle.DrawModel();
+    glPopMatrix();
+}
+
+void renderHorizontalBarrier() {
+    // horizontal obstacle
+    glPushMatrix();
+    glTranslatef(186.899, 0, 221.466);
+    glRotatef(270, 0, 1, 0);
+    glScalef(400, 400, 400);
+    horizontalTraffic.DrawModel();
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(186.899, 0, 226.466);
+    glRotatef(270, 0, 1, 0);
+    glScalef(400, 400, 400);
+    horizontalTraffic.DrawModel();
+    glPopMatrix();
+
+    glPushMatrix();
+    glTranslatef(186.899, 0, 231.466);
+    glRotatef(270, 0, 1, 0);
+    glScalef(400, 400, 400);
+    horizontalTraffic.DrawModel();
+    glPopMatrix();
+}
+
 //=======================================================================
 // Display Function
 //=======================================================================
@@ -2251,35 +2292,9 @@ void myDisplay(void)
     finishModel.DrawModel();
     glPopMatrix();
 
-    // horizontal obstacle
-    glPushMatrix();
-    glTranslatef(186.899, 0, 221.466);
-    glRotatef(270, 0, 1, 0);
-    glScalef(500, 500, 500);
-    horizontalTraffic.DrawModel();
-    glPopMatrix();
+    renderHorizontalBarrier(); 
 
-    glPushMatrix();
-    glTranslatef(186.899, 0, 226.466);
-    glRotatef(270, 0, 1, 0);
-    glScalef(500, 500, 500);
-    horizontalTraffic.DrawModel();
-    glPopMatrix();
-
-    // traffic obstacles
-    glPushMatrix();
-    glTranslatef(2.23767, 0, -106.795);
-    glRotatef(180, 0, 1, 0);
-    glScalef(300, 300, 300);
-    trafficObstacle.DrawModel();
-    glPopMatrix();
-
-    glPushMatrix();
-    glTranslatef(-5.23767, 0, -106.795);
-    glRotatef(180, 0, 1, 0);
-    glScalef(300, 300, 300);
-    trafficObstacle.DrawModel();
-    glPopMatrix();
+	renderGoRight();
 
     // Draw skybox
     glPushMatrix();
