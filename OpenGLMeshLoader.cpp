@@ -3459,7 +3459,6 @@ void renderCar() {
         glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
         redWheelsFrontRight1.DrawModel();
         glPopMatrix();
-    }
 
     if (wheelRotationY < -52.5) {
         wheelRotationY = -52.5;
@@ -3604,7 +3603,7 @@ void myDisplay(void)
     glTranslatef(10, 0, 0);
     glScalef(0.7, 0.7, 0.7);
     model_tree.Draw();
-    glPopMatrix();*/
+    glPopMatrix();
    
     
     glPushMatrix();
