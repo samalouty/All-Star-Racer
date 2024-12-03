@@ -295,6 +295,7 @@ struct Nitro {
 
 std::vector<Cone> cones = {
     Cone(-1.35632f, 1.3f, 65.1768f),
+
     Cone(108.473f, 1.3f, 139.522f),
     Cone(195.703f, 1.3f, 204.171f),
     Cone(278.372f, 1.3f, 257.79f),
@@ -309,7 +310,7 @@ std::vector<Cone> cones = {
     Cone(-7.77166f, 1.3f, -119.751f),
     Cone(-152.706f, 1.3f, -55.6917f),
     Cone(-264.162f, 1.3f, 45.1598f),
-    Cone(-396.0f, 1.3f, 45.1598f) // Assuming the last value was cut off, added a placeholder value
+    //Cone(-396.0f, 1.3f, 45.1598f) // Assuming the last value was cut off, added a placeholder value
 };
 
 std::vector<Nitro> nitros = {
@@ -1451,6 +1452,8 @@ std::vector<Vertex> trackVertices = {
     {-4.97531f, 0.0f, -142.053f},
     {-5.27446f, 0.0f, -140.629f},
     {-5.60837f, 0.0f, -139.039f},
+    {38.5491, 0, 123.105},
+    {79.3444, 0, 143.464}, 
     {-5.87574f, 0.0f, -137.766f},
     {-6.15296f, 0.0f, -136.446f},
     {-6.53371f, 0.0f, -134.633f},
@@ -3369,6 +3372,7 @@ void drawHUD() {
 void resetGame() {
     gravityEnabled = false;
     gameOver = false;
+    isNitroActive = false;
     carPosition = Vector(0, 0, 0);  // Reset car position
     carRotation = 0;  // Reset car rotation
     carSpeed = 0;  // Reset car speed
@@ -3483,7 +3487,7 @@ void renderNitros() {
 
         glPushMatrix();
         glTranslatef(nitro.x, nitro.y, nitro.z);
-        glScalef(0.2f, 0.2f, 0.2f);  // Adjust scale if needed
+        glScalef(0.4f, 0.4f, 0.4f);  // Adjust scale if needed
         glRotatef(20, 1, 0, 0);
         glRotatef(rotation, 0, 1, 0);   // Adjust rotation if needed
         nitroModel.DrawModel();
