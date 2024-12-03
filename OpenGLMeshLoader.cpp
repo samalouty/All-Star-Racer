@@ -249,6 +249,11 @@ private:
 	}
 };
 
+
+struct Triangle {
+    glm::vec3 v1, v2, v3; // Triangle vertices
+};
+
 GLTFModel gltfModel1;
 GLTFModel carModel1;
 GLTFModel coneModel;
@@ -260,6 +265,9 @@ GLTFModel redWheelsBackRight1;
 GLTFModel finishModel; 
 GLTFModel horizontalTraffic;
 GLTFModel trafficObstacle;
+GLTFModel moscowModel; 
+GLTFModel bugattiModel;
+
 
 
 
@@ -352,6 +360,8 @@ Model_3DS model_bugatti;
 
 // Textures
 GLTexture tex_ground;
+
+int level = 1; 
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -469,6 +479,98 @@ void setupLighting() {
 //=======================================================================
 // Collision Functions
 //=======================================================================
+
+// Helper function to check if a point is in a triangle (Barycentric method)
+bool isPointInTriangle(const glm::vec2& p, const glm::vec2& a, const glm::vec2& b, const glm::vec2& c) {
+    glm::vec2 v0 = c - a;
+    glm::vec2 v1 = b - a;
+    glm::vec2 v2 = p - a;
+
+    float dot00 = glm::dot(v0, v0);
+    float dot01 = glm::dot(v0, v1);
+    float dot02 = glm::dot(v0, v2);
+    float dot11 = glm::dot(v1, v1);
+    float dot12 = glm::dot(v1, v2);
+
+    float invDenom = 1.0f / (dot00 * dot11 - dot01 * dot01);
+    float u = (dot11 * dot02 - dot01 * dot12) * invDenom;
+    float v = (dot00 * dot12 - dot01 * dot02) * invDenom;
+
+    return (u >= 0) && (v >= 0) && (u + v <= 1);
+}
+
+// Function to load triangles from GLTF model
+std::vector<Triangle> loadTrackTriangles(const std::string& filepath) {
+    tinygltf::Model model;
+    tinygltf::TinyGLTF loader;
+    std::string err, warn;
+
+    if (!loader.LoadASCIIFromFile(&model, &err, &warn, filepath)) {
+        std::cerr << "Failed to load GLTF file: " << err << "\n";
+        exit(EXIT_FAILURE);
+    }
+
+    std::vector<Triangle> triangles;
+
+    for (const auto& mesh : model.meshes) {
+        for (const auto& primitive : mesh.primitives) {
+            const auto& accessor = model.accessors[primitive.indices];
+            const auto& bufferView = model.bufferViews[accessor.bufferView];
+            const auto& buffer = model.buffers[bufferView.buffer];
+            const auto& indices = reinterpret_cast<const unsigned short*>(
+                &buffer.data[bufferView.byteOffset + accessor.byteOffset]);
+
+            const auto& positionAccessor = model.accessors[primitive.attributes.at("POSITION")];
+            const auto& positionBufferView = model.bufferViews[positionAccessor.bufferView];
+            const auto& positionBuffer = model.buffers[positionBufferView.buffer];
+            const auto& positions = reinterpret_cast<const float*>(
+                &positionBuffer.data[positionBufferView.byteOffset + positionAccessor.byteOffset]);
+
+            for (size_t i = 0; i < accessor.count; i += 3) {
+                Triangle tri = {
+                    glm::vec3(positions[indices[i] * 3], positions[indices[i] * 3 + 1], positions[indices[i] * 3 + 2]),
+                    glm::vec3(positions[indices[i + 1] * 3], positions[indices[i + 1] * 3 + 1], positions[indices[i + 1] * 3 + 2]),
+                    glm::vec3(positions[indices[i + 2] * 3], positions[indices[i + 2] * 3 + 1], positions[indices[i + 2] * 3 + 2])
+                };
+                triangles.push_back(tri);
+            }
+        }
+    }
+
+    return triangles;
+}
+
+// Function to find the y value for the car's position
+float findCarHeight(const glm::vec3& carPosition, const std::vector<Triangle>& trackTriangles) {
+    for (const auto& tri : trackTriangles) {
+        glm::vec2 p(carPosition.x, carPosition.z);
+        glm::vec2 a(tri.v1.x, tri.v1.z);
+        glm::vec2 b(tri.v2.x, tri.v2.z);
+        glm::vec2 c(tri.v3.x, tri.v3.z);
+
+        if (isPointInTriangle(p, a, b, c)) {
+            // Barycentric interpolation to find height
+            glm::vec3 ab = tri.v2 - tri.v1;
+            glm::vec3 ac = tri.v3 - tri.v1;
+            glm::vec3 ap = glm::vec3(carPosition.x, 0.0f, carPosition.z) - tri.v1;
+
+            float areaABC = glm::length(glm::cross(ab, ac));
+            float areaPBC = glm::length(glm::cross(tri.v2 - glm::vec3(carPosition.x, 0, carPosition.z),
+                tri.v3 - glm::vec3(carPosition.x, 0, carPosition.z)));
+            float areaPCA = glm::length(glm::cross(tri.v3 - glm::vec3(carPosition.x, 0, carPosition.z),
+                tri.v1 - glm::vec3(carPosition.x, 0, carPosition.z)));
+
+            float alpha = areaPBC / areaABC;
+            float beta = areaPCA / areaABC;
+            float gamma = 1.0f - alpha - beta;
+
+            return alpha * tri.v1.y + beta * tri.v2.y + gamma * tri.v3.y;
+        }
+    }
+
+    return carPosition.y; // Default to current height if no triangle found
+}
+
 struct Vertex {
     float x; // X coordinate
     float y; // Y coordinate
@@ -478,6 +580,9 @@ struct Vertex {
     Vertex(float x, float y, float z) : x(x), y(y), z(z) {}
 
 };
+
+std::vector<Triangle> trackTriangles;
+
 
 std::vector<Vertex> trackVertices = {
     {76.6958, 0, 127.19},
@@ -2767,6 +2872,82 @@ void handleCarControls(float deltaTime) {
     while (carRotation < 0.0f) carRotation += 360.0f;
 }
 
+
+void handleCarControls2(float deltaTime) {
+    // Accelerate
+    turnSpeed = 200.0f;
+
+    if (isAccelerating) {
+        carSpeed += acceleration * deltaTime;
+        if (carSpeed > maxSpeed && !isNitroActive) carSpeed = maxSpeed;
+    }
+    // Brake/Reverse
+    else if (isBraking) {
+        carSpeed -= deceleration * deltaTime;
+        if (carSpeed < -20) carSpeed = -20; // Allow negative speed for reverse
+    }
+    // Coast (slow down gradually)
+    else {
+        if (carSpeed > 0) {
+            carSpeed -= deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+            if (carSpeed < 0) carSpeed = 0;
+        }
+        else if (carSpeed < 0) {
+            carSpeed += deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+            if (carSpeed > 0) carSpeed = 0;
+        }
+    }
+
+    // Turn left
+    if (wheelRotationY > 0) {
+        carRotation += turnSpeed * deltaTime * (carSpeed / maxSpeed);
+    }
+    // Turn right
+    else if (wheelRotationY < 0) {
+        carRotation -= turnSpeed * deltaTime * (carSpeed / maxSpeed);
+    }
+
+    // Normalize rotation to 0-360 degrees
+    while (carRotation >= 360.0f) carRotation -= 360.0f;
+    while (carRotation < 0.0f) carRotation += 360.0f;
+}
+
+void updateCarPosition2(float deltaTime) {
+
+
+    float radians = carRotation * M_PI / 180.0;
+
+    carPosition.x += sin(radians) * carSpeed * deltaTime;
+    carPosition.z += cos(radians) * carSpeed * deltaTime;
+    glm::vec3 carPositionG = glm::vec3(carPosition.x, carPosition.y, carPosition.z);
+    //carPosition.y = findCarHeight(carPositionG, trackTriangles);
+
+    if (carPosition.y < 0) {
+        carPosition.y = 0;
+    }
+    if (carPosition.y > 25) {
+        carPosition.y = 25;
+    }
+
+    std::cout << "Car Height: " << carPosition.y << std::endl;
+
+    wheelRotationX += carSpeed * 360.0f * deltaTime;
+
+    if (!gameWon && hasPassedFinishLine()) {
+        gameWon = true;
+        playerTime = 90.0f - gameTimer; // Calculate player's time
+    }
+
+    // Update game timer
+    if (!gameWon && !gameOver && timerStarted) {
+        gameTimer -= deltaTime;
+        if (gameTimer <= 0) {
+            gameOver = true;
+            lastCarPosition = carPosition;
+        }
+    }
+}
+
 //=======================================================================
 // Lighting Configuration Function
 //=======================================================================
@@ -2932,10 +3113,6 @@ void updateCamera()
             }
         }
     }
-
-
-
-
     else if (gameOver) {
         Eye = Vector(lastCarPosition.x, lastCarPosition.y + 5.0f, lastCarPosition.z + 10.0f);
         At = Vector(carPosition.x, 0, carPosition.z);
@@ -2953,47 +3130,52 @@ void updateCamera()
     else
     if (currentView == INSIDE_FRONT)
     {
-        float carRadians = -(carRotation * M_PI / 180.0);
-        float yawRadians = cameraYaw * M_PI / 180.0;
-        float pitchRadians = cameraPitch * M_PI / 180.0;
+        if (level == 1) {
+            float carRadians = -(carRotation * M_PI / 180.0);
+            float yawRadians = cameraYaw * M_PI / 180.0;
+            float pitchRadians = cameraPitch * M_PI / 180.0;
 
-        // Calculate the rotated camera offset using car's rotation
-        Vector rotatedCameraOffset(
-            cameraOffset.x * cos(carRadians) - cameraOffset.z * sin(carRadians),
-            cameraOffset.y,
-            cameraOffset.x * sin(carRadians) + cameraOffset.z * cos(carRadians)
-        );
+            // Calculate the rotated camera offset using car's rotation
+            Vector rotatedCameraOffset(
+                cameraOffset.x * cos(carRadians) - cameraOffset.z * sin(carRadians),
+                cameraOffset.y,
+                cameraOffset.x * sin(carRadians) + cameraOffset.z * cos(carRadians)
+            );
 
-        // Apply yaw and pitch rotations to the look-at vector
-        Vector lookAt(0.0348995, 0, 0.999391);
+            // Apply yaw and pitch rotations to the look-at vector
+            Vector lookAt(0.0348995, 0, 0.999391);
 
-        // Apply yaw rotation
-        Vector yawLookAt(
-            lookAt.x * cos(yawRadians) - lookAt.z * sin(yawRadians),
-            lookAt.y,
-            lookAt.x * sin(yawRadians) + lookAt.z * cos(yawRadians)
-        );
+            // Apply yaw rotation
+            Vector yawLookAt(
+                lookAt.x * cos(yawRadians) - lookAt.z * sin(yawRadians),
+                lookAt.y,
+                lookAt.x * sin(yawRadians) + lookAt.z * cos(yawRadians)
+            );
 
-        // Apply pitch rotation
-        Vector pitchLookAt(
-            yawLookAt.x,
-            yawLookAt.y * cos(pitchRadians) - yawLookAt.z * sin(pitchRadians),
-            yawLookAt.y * sin(pitchRadians) + yawLookAt.z * cos(pitchRadians)
-        );
+            // Apply pitch rotation
+            Vector pitchLookAt(
+                yawLookAt.x,
+                yawLookAt.y * cos(pitchRadians) - yawLookAt.z * sin(pitchRadians),
+                yawLookAt.y * sin(pitchRadians) + yawLookAt.z * cos(pitchRadians)
+            );
 
-        Eye = Vector(
-            carPosition.x + rotatedCameraOffset.x,
-            carPosition.y + rotatedCameraOffset.y,
-            carPosition.z + rotatedCameraOffset.z
-        );
+            Eye = Vector(
+                carPosition.x + rotatedCameraOffset.x,
+                carPosition.y + rotatedCameraOffset.y,
+                carPosition.z + rotatedCameraOffset.z
+            );
 
-        At = Vector(
-            Eye.x + pitchLookAt.x + sin(-carRadians) * cameraLookAheadDistance,
-            Eye.y + pitchLookAt.y,
-            Eye.z + pitchLookAt.z + cos(-carRadians) * cameraLookAheadDistance
-        );
+            At = Vector(
+                Eye.x + pitchLookAt.x + sin(-carRadians) * cameraLookAheadDistance,
+                Eye.y + pitchLookAt.y,
+                Eye.z + pitchLookAt.z + cos(-carRadians) * cameraLookAheadDistance
+            );
 
-        Up = Vector(0, 1, 0);
+            Up = Vector(0, 1, 0);
+        }
+        else {
+
+        }
     }
 
     else if (currentView == THIRD_PERSON)
@@ -3768,6 +3950,44 @@ void myDisplay(void)
     glutSwapBuffers();
 }
 
+void myDisplay2(void) {
+
+    static int lastTime = 0;
+    int currentTime = glutGet(GLUT_ELAPSED_TIME);
+    float deltaTime = (currentTime - lastTime) / 1000.0f;
+    lastTime = currentTime;
+    handleCarControls2(deltaTime);
+    updateCarPosition2(deltaTime);
+
+    glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    updateCamera();
+
+    // draw moscow 
+
+    glPushMatrix();
+    //glTranslatef(181.899, 0, 231.466);
+    //glRotatef(270, 0, 1, 0);
+    glScalef(1, 1, 1);
+    moscowModel.DrawModel();
+    glPopMatrix();
+
+
+    // Update car model position and rotation
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);
+    //glScalef(1, 1, 1);
+    glRotatef(0, 0, 1, 0);
+    bugattiModel.DrawModel();
+    glPopMatrix();
+
+
+    glutSwapBuffers();
+
+
+}
+
 //=======================================================================
 // Keyboard Function
 //=======================================================================
@@ -3981,6 +4201,9 @@ void myReshape(int w, int h)
 //=======================================================================
 // Assets Loading Function
 //=======================================================================
+
+// Load Level 1 
+
 void LoadAssets()
 {
 	// Loading Model files
@@ -3988,6 +4211,8 @@ void LoadAssets()
 	model_tree.Load("Models/tree/Tree1.3ds");
 	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
 
+
+    
 	if (!gltfModel1.LoadModel("models/track5/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
@@ -4054,6 +4279,24 @@ void LoadAssets()
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
 }
 
+// Load Level 2
+
+void LoadAssets2() {
+
+    if (!moscowModel.LoadModel("models/moscow/scene.gltf")) {
+	std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+
+    trackTriangles = loadTrackTriangles("models/moscow-test/scene.gltf");
+    
+
+    if (!bugattiModel.LoadModel("models/bugatti-test/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+
+
+}
+
 //=======================================================================
 // Main Function
 //=======================================================================
@@ -4075,7 +4318,17 @@ void main(int argc, char** argv)
 
 	glutCreateWindow(title);
 
-	glutDisplayFunc(myDisplay);
+    
+
+    if(level == 1)
+	{
+		glutDisplayFunc(myDisplay);
+	}
+	else
+	{
+		glutDisplayFunc(myDisplay2);
+
+	}
 
 	glutKeyboardFunc(myKeyboard);
 	glutSpecialFunc(specialKeyboard);
@@ -4091,7 +4344,13 @@ void main(int argc, char** argv)
 
 	myInit();
 
-	LoadAssets();
+    if (level == 1) {
+        LoadAssets();
+    }
+    else {
+        LoadAssets2();
+	
+    }
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_LIGHTING);
     glEnable(GL_LIGHT0);
