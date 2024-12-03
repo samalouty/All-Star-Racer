@@ -267,6 +267,9 @@ GLTFModel horizontalTraffic;
 GLTFModel trafficObstacle;
 GLTFModel moscowModel; 
 GLTFModel bugattiModel;
+GLTFModel blueWheelModel;
+
+
 
 
 
@@ -3050,7 +3053,7 @@ std::vector<Vector> cinematicPoints = {
     Vector(106.284, 20, 500.741),
     Vector(0.261323, 20, -158.15),
     Vector(243.843, 20, 600.5731),
-    Vector(1.5, 0.4, -3),
+    Vector(2, 0.4, -3),
     // Add more points as needed
 };
 const float POINT_DISPLAY_DURATION = 2.0f;
@@ -3769,31 +3772,31 @@ void renderCar() {
         redWheelsFrontRight1.DrawModel();
         glPopMatrix();
 
-    if (wheelRotationY < -52.5) {
-        wheelRotationY = -52.5;
-    }
+    //if (wheelRotationY < -52.5) {
+    //    wheelRotationY = -52.5;
+    //}
 
 
-    // Draw front left wheel
-    glPushMatrix();
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
-    //glScalef(0.5, 0.5, 0.5);
-    glRotatef(180 + wheelRotationY, 0, 1, 0);
-    glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-    redWheelsFrontLeft1.DrawModel();
-    glPopMatrix();
+    //// Draw front left wheel
+    //glPushMatrix();
+    //glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    //glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    //glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
+    ////glScalef(0.5, 0.5, 0.5);
+    //glRotatef(180 + wheelRotationY, 0, 1, 0);
+    //glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    //redWheelsFrontLeft1.DrawModel();
+    //glPopMatrix();
 
-    // Draw front right wheel
-    glPushMatrix();
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
-    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
-    glRotatef(wheelRotationY, 0, 1, 0);
-    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
-    redWheelsFrontRight1.DrawModel();
-    glPopMatrix();
+    //// Draw front right wheel
+    //glPushMatrix();
+    //glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    //glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    //glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
+    //glRotatef(wheelRotationY, 0, 1, 0);
+    //glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    //redWheelsFrontRight1.DrawModel();
+    //glPopMatrix();
 
  //   // Update headlight positions
  //   glm::mat4 carTransform = glm::mat4(1.0f);
@@ -3818,6 +3821,83 @@ void renderCar() {
  //   headlight_dir[0] = headlightDir.x;
  //   headlight_dir[1] = headlightDir.y;
  //   headlight_dir[2] = headlightDir.z;
+}
+
+void renderCar2() {
+    // Update car model position and rotation
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);
+    //glScalef(1, 1, 1);
+    glRotatef(0, 0, 1, 0);
+    bugattiModel.DrawModel();
+    glPopMatrix();
+
+    // Offsets for the wheels relative to the car's position
+    float wheelOffsetX = -1.4f; // Horizontal offset from the car's center
+    float wheelOffsetY = 0.5f; // Vertical offset below the car
+    float wheelOffsetZFront = -2.0f; // Forward offset for front wheels
+    float wheelOffsetZBack = 1.8f; // Backward offset for back wheels
+    float scaleBlueWheel = 0.14f;
+
+    // Draw back left wheel
+    glPushMatrix();
+    //glScalef(1, 1, 1); 
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+    glRotatef(180, 0, 1, 0);  // to face the right direction
+    glScalef(scaleBlueWheel, scaleBlueWheel, scaleBlueWheel);
+    blueWheelModel.DrawModel();
+    glPopMatrix();
+
+    // Draw back right wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZFront);
+    //glScalef(0.5, 0.5, 0.5);
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or down
+    glRotatef(0, 0, 1, 0);
+    glScalef(scaleBlueWheel, scaleBlueWheel, scaleBlueWheel);
+
+    blueWheelModel.DrawModel();
+    glPopMatrix();
+
+    if (wheelRotationY > 70) {
+        wheelRotationY = 70;
+    }
+
+    if (wheelRotationY < -70) {
+        wheelRotationY = -70;
+    }
+
+
+    // Draw front left wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(-wheelOffsetX, wheelOffsetY, wheelOffsetZBack);
+    //glScalef(0.5, 0.5, 0.5);
+    glRotatef(180 + wheelRotationY, 0, 1, 0);
+    glRotatef(-wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    glScalef(scaleBlueWheel, scaleBlueWheel, scaleBlueWheel);
+
+    blueWheelModel.DrawModel();
+    glPopMatrix();
+
+    // Draw front right wheel
+    glPushMatrix();
+    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
+    glRotatef(carRotation, 0, 1, 0);  // to face the right direction
+    glTranslatef(wheelOffsetX, wheelOffsetY, wheelOffsetZBack);	//glScalef(0.5, 0.5, 0.5);
+    glRotatef(wheelRotationY, 0, 1, 0);
+    glRotatef(wheelRotationX, 1, 0, 0);  // rotate on x here when clicking up or 
+    glScalef(scaleBlueWheel, scaleBlueWheel, scaleBlueWheel);
+    blueWheelModel.DrawModel();
+    glPopMatrix();
 }
 
 void renderGoRight() {
@@ -3979,15 +4059,7 @@ void myDisplay2(void) {
     glPopMatrix();
 
 
-    // Update car model position and rotation
-    glPushMatrix();
-    glTranslatef(carPosition.x, carPosition.y, carPosition.z);
-    glRotatef(carRotation, 0, 1, 0);
-    //glScalef(1, 1, 1);
-    glRotatef(0, 0, 1, 0);
-    bugattiModel.DrawModel();
-    glPopMatrix();
-
+    renderCar2(); 
 
     glutSwapBuffers();
 
@@ -4100,6 +4172,7 @@ void specialKeyboard(int key, int x, int y)
         break;
     case GLUT_KEY_UP:
         if (!isColliding) {
+            if(carSpeed <= 20) wheelRotationX += 2.0f;
             wheelRotationX += 6.0f;
             isAccelerating = true;
             isBraking = false;
@@ -4109,6 +4182,7 @@ void specialKeyboard(int key, int x, int y)
         }
         break;
     case GLUT_KEY_DOWN:
+        if (carSpeed <= 20) wheelRotationX -= 2.0f;
         wheelRotationX -= 6.0f;
         isAccelerating = false;
         isBraking = true;
@@ -4296,10 +4370,39 @@ void LoadAssets2() {
     trackTriangles = loadTrackTriangles("models/moscow-test/scene.gltf");
     
 
-    if (!bugattiModel.LoadModel("models/bugatti-test/scene.gltf")) {
+    if (!bugattiModel.LoadModel("models/bugatti-no-wheels/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
+ //   if (!blueWheelsFrontLeft.LoadModel("models/wheel/scene.gltf")) {
+ //       std::cerr << "Failed to load GLTF model" << std::endl;
+ //       // Handle error
+ //   }
+
+ //   if (!blueWheelsFrontRight.LoadModel("models/wheel/scene.gltf")) {
+	//	std::cerr << "Failed to load GLTF model" << std::endl;
+	//	// Handle error
+	//}
+
+ //   if (!blueWheelsBackLeft.LoadModel("models/wheel/scene.gltf")) {
+	//	std::cerr << "Failed to load GLTF model" << std::endl;
+	//	// Handle error
+	//}
+
+ //   if (!blueWheelsBackRight.LoadModel("models/wheel/scene.gltf")) {
+ //       std::cerr << "Failed to load GLTF model" << std::endl;
+ //       // Handle error
+ //   }
+
+    if (!blueWheelModel.LoadModel("models/blue-wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+
+
+
+    
 
 }
 
