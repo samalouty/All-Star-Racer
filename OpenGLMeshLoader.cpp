@@ -361,7 +361,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 1; 
+int level = 2; 
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -3130,7 +3130,6 @@ void updateCamera()
     else
     if (currentView == INSIDE_FRONT)
     {
-        if (level == 1) {
             float carRadians = -(carRotation * M_PI / 180.0);
             float yawRadians = cameraYaw * M_PI / 180.0;
             float pitchRadians = cameraPitch * M_PI / 180.0;
@@ -3159,11 +3158,21 @@ void updateCamera()
                 yawLookAt.y * sin(pitchRadians) + yawLookAt.z * cos(pitchRadians)
             );
 
-            Eye = Vector(
-                carPosition.x + rotatedCameraOffset.x,
-                carPosition.y + rotatedCameraOffset.y,
-                carPosition.z + rotatedCameraOffset.z
-            );
+            if (level == 1) {
+                Eye = Vector(
+                    carPosition.x + rotatedCameraOffset.x,
+                    carPosition.y + rotatedCameraOffset.y,
+                    carPosition.z + rotatedCameraOffset.z
+                );
+            }
+            else {
+                Eye = Vector(
+                    carPosition.x + rotatedCameraOffset.x,
+                    carPosition.y + rotatedCameraOffset.y + 0.05,
+                    carPosition.z + rotatedCameraOffset.z + 0.05
+                );
+
+            }
 
             At = Vector(
                 Eye.x + pitchLookAt.x + sin(-carRadians) * cameraLookAheadDistance,
@@ -3172,10 +3181,7 @@ void updateCamera()
             );
 
             Up = Vector(0, 1, 0);
-        }
-        else {
-
-        }
+       
     }
 
     else if (currentView == THIRD_PERSON)
