@@ -2932,7 +2932,8 @@ void updateCarPosition2(float deltaTime) {
         carPosition.y = 25;
     }
 
-    std::cout << "Car Height: " << carPosition.y << std::endl;
+    std::cout << "Car Pos: ";
+    carPosition.print();
 
     wheelRotationX += carSpeed * 360.0f * deltaTime;
 
@@ -3054,8 +3055,15 @@ std::vector<Vector> cinematicPoints = {
     Vector(0.261323, 20, -158.15),
     Vector(243.843, 20, 600.5731),
     Vector(2, 0.4, -3),
-    // Add more points as needed
 };
+
+std::vector<Vector> cinematicPoints2 = {
+  Vector(-150.249, 90, 629.321),
+    Vector(-187.911, 80, 447.393),
+    Vector(-41.9579, 30, 78.913),
+    Vector(2, 0.4, -3),
+};
+
 const float POINT_DISPLAY_DURATION = 2.0f;
 const float FINAL_POINT_DURATION = 2.0f; // Duration for final point
 const float FINAL_POINT_RADIUS = 10.0f; // Radius for the final point
@@ -3068,51 +3076,102 @@ void updateCamera()
 
     if (currentView == CINEMATIC) {
         // Check if we're at the final point
-        if (currentCinematicPoint == cinematicPoints.size() - 1) {
-            float t = cinematicTimer / FINAL_POINT_DURATION;
-            Vector current = cinematicPoints[currentCinematicPoint];
+        if (level == 1) {
+            if (currentCinematicPoint == cinematicPoints.size() - 1) {
+                float t = cinematicTimer / FINAL_POINT_DURATION;
+                Vector current = cinematicPoints[currentCinematicPoint];
 
-            // Move the camera backwards continuously from the current point
-            Eye.x = current.x;
-            Eye.y = current.y;
-            Eye.z = current.z - t * FINAL_POINT_RADIUS; // Continuously move away from the point
-            At = current;
+                // Move the camera backwards continuously from the current point
+                Eye.x = current.x;
+                Eye.y = current.y;
+                Eye.z = current.z - t * FINAL_POINT_RADIUS; // Continuously move away from the point
+                At = current;
 
-            // Update timer
-            cinematicTimer += 0.016; // Assuming 60 FPS
+                // Update timer
+                cinematicTimer += 0.016; // Assuming 60 FPS
 
-            // Move to the next point after the display duration
-            if (cinematicTimer >= FINAL_POINT_DURATION) {
-                cinematicTimer = 0;
-                currentCinematicPoint = 0; // Reset to the first point
-                currentView = THIRD_PERSON;
+                // Move to the next point after the display duration
+                if (cinematicTimer >= FINAL_POINT_DURATION) {
+                    cinematicTimer = 0;
+                    currentCinematicPoint = 0; // Reset to the first point
+                    currentView = THIRD_PERSON;
+                }
+            }
+            else {
+                // Cinematic camera movement for other points
+                float t = cinematicTimer / CINEMATIC_DURATION;
+                int nextPoint = (currentCinematicPoint + 1) % cinematicPoints.size();
+                Vector current = cinematicPoints[currentCinematicPoint];
+                Vector next = cinematicPoints[nextPoint];
+
+                // Interpolate between current and next point
+                Eye.x = current.x + (next.x - current.x) * t;
+                Eye.y = current.y + (next.y - current.y) * t;
+                Eye.z = current.z + (next.z - current.z) * t;
+
+                // Look at the next point
+                At = next;
+
+                // Update timer and current point
+                cinematicTimer += 0.016; // Assuming 60 FPS
+                if (cinematicTimer >= CINEMATIC_DURATION / cinematicPoints.size()) {
+                    cinematicTimer = 0;
+                    currentCinematicPoint = nextPoint;
+                }
+
+                // If cinematic is complete, switch to third person view
+                if (currentCinematicPoint == 0 && cinematicTimer == 0) {
+                    currentView = THIRD_PERSON;
+                }
             }
         }
         else {
-            // Cinematic camera movement for other points
-            float t = cinematicTimer / CINEMATIC_DURATION;
-            int nextPoint = (currentCinematicPoint + 1) % cinematicPoints.size();
-            Vector current = cinematicPoints[currentCinematicPoint];
-            Vector next = cinematicPoints[nextPoint];
+            if (currentCinematicPoint == cinematicPoints2.size() - 1) {
+                float t = cinematicTimer / FINAL_POINT_DURATION;
+                Vector current = cinematicPoints2[currentCinematicPoint];
 
-            // Interpolate between current and next point
-            Eye.x = current.x + (next.x - current.x) * t;
-            Eye.y = current.y + (next.y - current.y) * t;
-            Eye.z = current.z + (next.z - current.z) * t;
+                // Move the camera backwards continuously from the current point
+                Eye.x = current.x;
+                Eye.y = current.y;
+                Eye.z = current.z - t * FINAL_POINT_RADIUS; // Continuously move away from the point
+                At = current;
 
-            // Look at the next point
-            At = next;
+                // Update timer
+                cinematicTimer += 0.016; // Assuming 60 FPS
 
-            // Update timer and current point
-            cinematicTimer += 0.016; // Assuming 60 FPS
-            if (cinematicTimer >= CINEMATIC_DURATION / cinematicPoints.size()) {
-                cinematicTimer = 0;
-                currentCinematicPoint = nextPoint;
+                // Move to the next point after the display duration
+                if (cinematicTimer >= FINAL_POINT_DURATION) {
+                    cinematicTimer = 0;
+                    currentCinematicPoint = 0; // Reset to the first point
+                    currentView = THIRD_PERSON;
+                }
             }
+            else {
+                // Cinematic camera movement for other points
+                float t = cinematicTimer / CINEMATIC_DURATION;
+                int nextPoint = (currentCinematicPoint + 1) % cinematicPoints2.size();
+                Vector current = cinematicPoints2[currentCinematicPoint];
+                Vector next = cinematicPoints2[nextPoint];
 
-            // If cinematic is complete, switch to third person view
-            if (currentCinematicPoint == 0 && cinematicTimer == 0) {
-                currentView = THIRD_PERSON;
+                // Interpolate between current and next point
+                Eye.x = current.x + (next.x - current.x) * t;
+                Eye.y = current.y + (next.y - current.y) * t;
+                Eye.z = current.z + (next.z - current.z) * t;
+
+                // Look at the next point
+                At = next;
+
+                // Update timer and current point
+                cinematicTimer += 0.016; // Assuming 60 FPS
+                if (cinematicTimer >= CINEMATIC_DURATION / cinematicPoints2.size()) {
+                    cinematicTimer = 0;
+                    currentCinematicPoint = nextPoint;
+                }
+
+                // If cinematic is complete, switch to third person view
+                if (currentCinematicPoint == 0 && cinematicTimer == 0) {
+                    currentView = THIRD_PERSON;
+                }
             }
         }
     }
@@ -4060,6 +4119,8 @@ void myDisplay2(void) {
 
 
     renderCar2(); 
+
+    drawHUD();
 
     glutSwapBuffers();
 
