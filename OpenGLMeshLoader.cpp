@@ -528,6 +528,51 @@ void setupLighting() {
     glLightfv(GL_LIGHT1, GL_SPECULAR, lightColor);
 }
 
+
+// Array to hold the coordinates of the streetlights
+std::vector<std::pair<float, float>> streetlightCoords = {
+     {14.0092f, 12.6268f},
+    {2.79439f, 37.8671f},
+    {1.01146, 77.4396},
+    { -47.6336, 97.3934},
+    {-38.3406, 234.351},
+    {-134.88,198.58},
+    {-164.885, 249.684},
+	{-225.918, 375.122},
+};
+
+// Function to generate random brightness for flickering effect
+float getRandomBrightness() {
+    return 0.5f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / 0.5f)); // Range [0.5, 1.0]
+}
+
+
+void renderStreetlights() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_COLOR_MATERIAL);
+
+    for (size_t i = 0; i < streetlightCoords.size(); ++i) {
+        float brightness = getRandomBrightness(); // Generate random brightness for flicker
+
+        // Set light properties
+        GLfloat lightColor[] = { brightness, brightness, 0.0f, 1.0f }; // Yellow light
+        GLfloat lightPos[] = { streetlightCoords[i].first, 1.0f, streetlightCoords[i].second, 1.0f }; // Position
+		GLfloat lightDir[] = { 0.0f, -1.0f, 0.0f }; // Direction
+
+        // Set attenuation (to limit light spread)
+        glEnable(GL_LIGHT0 + i);
+        glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, lightColor);
+        glLightfv(GL_LIGHT0 + i, GL_POSITION, lightPos);
+        glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, 0.8f);
+        glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, 0.2f);
+        glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 0.1f);
+		//glLightf(GL_LIGHT0 + i, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
+		//glLightf(GL_LIGHT0 + i, GL_SPOT_EXPONENT, 10.0f);          // Intensity falloff
+		glLightfv(GL_LIGHT0 + i, GL_SPOT_DIRECTION, lightDir); // Direction
+    }
+}
+
+
 //=======================================================================
 // Collision Functions
 //=======================================================================
@@ -5845,9 +5890,10 @@ void myDisplay2(void) {
     moscowModel.DrawModel();
     glPopMatrix();
 
-
+    setupLighting();
     renderCar2(); 
     renderCoins();
+    renderStreetlights();
 
 
     drawHUD();
