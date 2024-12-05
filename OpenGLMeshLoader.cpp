@@ -286,6 +286,136 @@ GLdouble aspectRatio = (GLdouble)WIDTH / (GLdouble)HEIGHT;
 GLdouble zNear = 0.1;
 GLdouble zFar = 10000;
 
+class SunriseEffect {
+private:
+    float time; // Time elapsed since start of effect
+    float duration; // Total duration of effect in seconds
+
+    // Linear interpolation function
+    float lerp(float a, float b, float t) const {
+        return a + t * (b - a);
+    }
+
+    // Smooth step function for easing
+    float smoothStep(float t) const {
+        return t * t * (3 - 2 * t);
+    }
+
+public:
+    SunriseEffect(float duration = 300.0f) : time(0.0f), duration(duration) {}
+
+    void update(float deltaTime) {
+        time += deltaTime;
+        if (time > duration) {
+            time = duration; // Cap at maximum duration
+        }
+    }
+
+    void apply() {
+        float t = time / duration; // Normalized time (0 to 1)
+        t = smoothStep(t); // Apply easing for smoother transition
+
+        // Dark blue sky color
+        float startR = 0.0f, startG = 0.0f, startB = 0.2f;
+
+        // Light blue sky color
+        float endR = 0.5f, endG = 0.7f, endB = 1.0f;
+
+        // Interpolate between dark blue and light blue
+        float r = lerp(startR, endR, t);
+        float g = lerp(startG, endG, t);
+        float b = lerp(startB, endB, t);
+
+        // Set the clear color
+        glClearColor(r, g, b, 1.0f);
+    }
+};
+
+class MovingSunEffect {
+private:
+    float time;
+    float duration;
+    float sunPosition[3];
+    float sunBrightness;
+
+    float lerp(float a, float b, float t) const {
+        return a + t * (b - a);
+    }
+
+    float smoothStep(float t) const {
+        return t * t * (3 - 2 * t);
+    }
+
+public:
+    MovingSunEffect(float duration = 300.0f)
+        : time(0.0f), duration(duration), sunBrightness(0.0f) {
+        sunPosition[0] = -1.0f; // Start from the left
+        sunPosition[1] = -0.5f; // Start below the horizon
+        sunPosition[2] = 1.0f;
+    }
+
+    void update(float deltaTime) {
+        time += deltaTime;
+        if (time > duration) {
+            time = duration;
+        }
+
+        float t = smoothStep(time / duration);
+
+        // Move the sun from left to right and up (sunrise motion)
+        sunPosition[0] = lerp(-1.0f, 1.0f, t);
+        sunPosition[1] = lerp(-0.5f, 0.5f, t);
+
+        // Increase sun brightness
+        sunBrightness = lerp(0.0f, 1.0f, t);
+    }
+
+    void apply() {
+        float t = smoothStep(time / duration);
+
+        // Sky color transition (dawn colors)
+        float startR = 0.1f, startG = 0.1f, startB = 0.2f;
+        float midR = 0.7f, midG = 0.4f, midB = 0.3f;
+        float endR = 0.5f, endG = 0.7f, endB = 1.0f;
+
+        float r, g, b;
+        if (t < 0.5f) {
+            float t2 = t * 2.0f;
+            r = lerp(startR, midR, t2);
+            g = lerp(startG, midG, t2);
+            b = lerp(startB, midB, t2);
+        }
+        else {
+            float t2 = (t - 0.5f) * 2.0f;
+            r = lerp(midR, endR, t2);
+            g = lerp(midG, endG, t2);
+            b = lerp(midB, endB, t2);
+        }
+
+        glClearColor(r, g, b, 1.0f);
+
+        // Set up directional light
+        float lightAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+        float lightDiffuse[] = { 1.0f, 0.9f, 0.7f, 1.0f };
+        float lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+        // Apply sun brightness to light intensity
+        for (int i = 0; i < 3; ++i) {
+            lightAmbient[i] *= sunBrightness;
+            lightDiffuse[i] *= sunBrightness;
+            lightSpecular[i] *= sunBrightness;
+        }
+
+        glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+        glLightfv(GL_LIGHT0, GL_POSITION, sunPosition);
+
+        // Enable lighting
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
+    }
+};
 
 struct Cone {
     float x;
@@ -449,7 +579,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 1; 
+int level = 2; 
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -546,6 +676,9 @@ float nitroSpeedMultiplier = 20;
 float lastSpeed = 0.0f;
 
 int score = 0;
+SunriseEffect sunrise(120.0f);
+MovingSunEffect sunEffect(120.0f);
+
 
 // Function to set up the headlights
 void setupLighting() {
@@ -5895,7 +6028,13 @@ void myDisplay2(void) {
     handleCarControls2(deltaTime);
     updateCarPosition2(deltaTime);
 
-    glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
+    //glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
+    sunrise.update(deltaTime);
+    sunEffect.update(deltaTime);
+
+    // Clear the screen and apply the sunrise effect
+    sunrise.apply();
+    sunEffect.apply();
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     updateCamera();
 
