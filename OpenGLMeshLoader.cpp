@@ -449,7 +449,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 2; 
+int level = 1; 
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -2771,6 +2771,8 @@ std::vector<Vertex> trackVertices = {
 
 
 std::vector<Vertex> trackVertices2 = {
+    {-220.059, 0, 308.132}, 
+    {-84.9432, 0, 230.151}, 
     {-53.0841, 0, -26.9856},
     {-44.3211, 0, -24.9541}, 
     {-35.3845, 0, -24.2557},
@@ -5092,7 +5094,7 @@ void drawGameOverText() {
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
 
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
 }
 
@@ -5216,7 +5218,7 @@ void renderSpeedOMeter(float speed) {
     glDisable(GL_BLEND);
 
     // Re-enable lighting and depth testing
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
 
     glMatrixMode(GL_PROJECTION);
@@ -5408,7 +5410,7 @@ void drawHUD() {
     }
 
     // Re-enable lighting and depth testing
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
 
     glMatrixMode(GL_PROJECTION);
@@ -5481,34 +5483,6 @@ void myInit(void)
 //=======================================================================
 // Render Functions
 //=======================================================================
-void RenderGround()
-{
-	glDisable(GL_LIGHTING);	// Disable lighting 
-
-	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
-
-	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
-
-	glBindTexture(GL_TEXTURE_2D, tex_ground.texture[0]);	// Bind the ground texture
-
-	glPushMatrix();
-	glBegin(GL_QUADS);
-	glNormal3f(0, 1, 0);	// Set quad normal direction.
-	glTexCoord2f(0, 0);		// Set tex coordinates ( Using (0,0) -> (5,5) with texture wrapping set to GL_REPEAT to simulate the ground repeated grass texture).
-	glVertex3f(-20, 0, -20);
-	glTexCoord2f(5, 0);
-	glVertex3f(20, 0, -20);
-	glTexCoord2f(5, 5);
-	glVertex3f(20, 0, 20);
-	glTexCoord2f(0, 5);
-	glVertex3f(-20, 0, 20);
-	glEnd();
-	glPopMatrix();
-
-	glEnable(GL_LIGHTING);	// Enable lighting again for other entites coming throung the pipeline.
-
-	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
-}
 
 void renderCones() {
     for (const auto& cone : cones) {
