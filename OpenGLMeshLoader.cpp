@@ -5438,13 +5438,32 @@ void drawHUD() {
         renderSpeedOMeter(abs(carSpeed * 2.1));
     }
 
-
-    // Draw win text
     if (gameWon) {
-        glColor3f(0.0f, 1.0f, 0.0f); // Green color for "You Win"
+        int scoreTime = 9000 - static_cast<int>(gameTimer * 100);
+
+        std::ostringstream timeStream;
+        timeStream << std::fixed << std::setprecision(2) << playerTime;
+        std::string formattedTime = timeStream.str();
+
+        glColor3f(0.0f, 1.0f, 0.0f); 
+
+        
         glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2);
-        std::string winText = "You Win! Time: " + std::to_string(playerTime) + " seconds";
+        std::string winText = "You Win! Time: " + formattedTime + " seconds";
         for (char c : winText) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        }
+
+        // Second line: "Score: XXXX"
+        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30); 
+        std::string scoreText = "Score: " + std::to_string(scoreTime);
+        for (char c : scoreText) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        }
+
+        glRasterPos2i(WIDTH / 2 - 150, HEIGHT / 2 - 60); // Adjust Y-position for the new line
+        std::string instructionText = "Press R to restart or N to go to the next level";
+        for (char c : instructionText) {
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
         }
     }
