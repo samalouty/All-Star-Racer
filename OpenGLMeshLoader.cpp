@@ -399,6 +399,40 @@ std::vector<Coin> coins = {
     Coin(-183.778f, 1, 355.048f, 0)
 };    
 
+std::vector<Coin> originalCoins = {
+    Coin(7.92534, 1, 27.4013, 0),
+    Coin(10.554f, 1, 52.6967f, 0),
+    Coin(-10.9683f, 1, 87.0919f, 0),
+    Coin(-22.6874f, 1, 92.2444f, 0),
+    Coin(-34.7078f, 1, 76.8697f, 0),
+    Coin(-57.7044f, 1, 56.5818f, 0),
+    Coin(-68.7227f, 1, 75.522f, 0),
+    Coin(-50.6736f, 1, 96.5191f, 0),
+    Coin(-28.4619f, 1, 146.144f, 0),
+    Coin(-10.6378f, 1, 170.759f, 0),
+    Coin(-17.725f, 1, 204.849f, 0),
+    Coin(-40.5779f, 1, 230.781f, 0),
+    Coin(-82.1536f, 1, 249.69f, 0),
+    Coin(-110.309f, 1, 213.295f, 0),
+    Coin(-161.206f, 1, 173.604f, 0),
+    Coin(-196.742f, 1, 195.568f, 0),
+    Coin(-185.973f, 1, 227.619f, 0),
+    Coin(-167.631f, 1, 260.432f, 0),
+    Coin(-157.681f, 1, 289.419f, 0),
+    Coin(-171.671f, 1, 310.134f, 0),
+    Coin(-175.742f, 1, 327.887f, 0),
+    Coin(-162.257f, 1, 363.324f, 0),
+    Coin(-215.037f, 1, 231.271f, 0),
+    Coin(-227.006f, 1, 264.967f, 0),
+    Coin(-237.439f, 1, 294.338f, 0),
+    Coin(-165.869f, 1, 379.538f, 0),
+    Coin(-181.904f, 1, 398.383f, 0),
+    Coin(-209.562f, 1, 379.815f, 0),
+    Coin(-234.212f, 1, 335.71f, 0),
+    Coin(-216.211f, 1, 326.787f, 0),
+    Coin(-183.778f, 1, 355.048f, 0)
+};
+
 Vector Eye(20, 5, 20);
 Vector At(0, 0, 0);
 Vector Up(0, 1, 0);
@@ -493,7 +527,7 @@ GLfloat headlight_dir[] = { 0.0f, 0.0f, -1.0f };        // Direction of headligh
 bool gameOver = false;
 Vector lastCarPosition(0, 0, 0);
 bool gameWon = false;
-float gameTimer = 5000.0f; // 90 seconds timer
+float gameTimer = 90.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
 
@@ -510,6 +544,8 @@ float nitroTimer = 0.0f;
 float nitroDuration = 3.0f; // 3 seconds of nitro boost
 float nitroSpeedMultiplier = 20;
 float lastSpeed = 0.0f;
+
+int score = 0;
 
 // Function to set up the headlights
 void setupLighting() {
@@ -4444,6 +4480,18 @@ bool checkCollisionWithNitros(Vector& carPosition, std::vector<Nitro>& nitros, f
     return false; // No collision
 }
 
+bool checkCollisionWithCoins(Vector& carPosition, std::vector<Coin>& coins, float collisionThreshold = 2.0f) {
+    for (auto it = coins.begin(); it != coins.end(); ++it) {
+        Vector coinPosition(it->x, it->y, it->z);
+        if (carPosition.distanceToNoY(coinPosition) <= collisionThreshold) {
+            coins.erase(it); 
+            activateNitro(); 
+            return true; // Collision detected
+        }
+    }
+    return false; // No collision
+}
+
 void startRespawn() {
     isRespawning = true;
     respawnTimer = 0.0f;
@@ -4525,8 +4573,8 @@ void updateCarPosition(float deltaTime) {
     carPosition.z += cos(radians) * carSpeed * deltaTime;
 
     if (isPointInTrack(trackVertices, carPosition)) {
-        std::cout << "Car Pos: ";
-        carPosition.print();
+        //std::cout << "Car Pos: ";
+        //carPosition.print();
     }
     else {
         gravityEnabled = true;
@@ -4645,8 +4693,8 @@ void updateCarPosition2(float deltaTime) {
 
 
     if (isPointInTrack(trackVertices2, carPosition, 9.0f)) {
-        std::cout << "Car Pos: ";
-        carPosition.print();
+        /*std::cout << "Car Pos: ";
+        carPosition.print();*/
         collisionDetected = false;
     }
     else {
@@ -4671,6 +4719,11 @@ void updateCarPosition2(float deltaTime) {
             gameOver = true;
             lastCarPosition = carPosition;
         }
+    }
+    if (!gameWon && score == 27) {
+        /*printf("fffffffffffffffff");*/
+        gameWon = true;
+        playerTime = 90.0f - gameTimer; // Calculate player's time
     }
 }
 
@@ -5317,13 +5370,27 @@ void drawHUD() {
     float textY = stopwatchY + stopwatchHeight / 2 + 5;
     glRasterPos2f(textX, textY);
     for (char c : timerText) {
-        glutBitmapCharacter(GLUT_BITMAP_9_BY_15, c);
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+    if (level == 2) {
+        // Draw score of the player
+        glColor3f(0.0f, 1.0f, 0.0f); // Bright green for digital display
+        float scoreX = stopwatchX + 15;
+        float scoreY = stopwatchY + stopwatchHeight / 2 - 20;
+
+        std::string scoreText = "Score: " + std::to_string(score);
+        glRasterPos2f(scoreX, scoreY);
+
+        for (char c : scoreText) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        }
     }
 
     // Render speedometer if game is active
     if (!gameWon && !gameOver) {
         renderSpeedOMeter(abs(carSpeed * 2.1));
     }
+
 
     // Draw win text
     if (gameWon) {
@@ -5366,6 +5433,8 @@ void resetGame() {
     gameWon = false;
     gameTimer = 90.0f;
     playerTime = 0.0f;
+    nitros = originalNitros;
+	coins = originalCoins;
 
 }
 
@@ -5865,10 +5934,28 @@ void myDisplay2(void) {
     moscowModel.DrawModel();
     glPopMatrix();
 
+   /* glPushMatrix();
+    glTranslatef(1, 1, 2);
+    glRotatef(150, 1, 0, 0);
+    glScalef(1, 1, 1);
+    rock1Model.DrawModel();
+    glPopMatrix();*/
+
+    /*glPushMatrix();
+    glTranslatef(5, 1, 1);
+    glRotatef(70, 1, 0, 0);
+    glScalef(1, 1, 1);
+    rock2Model.DrawModel();
+    glPopMatrix();*/
 
     renderCar2(); 
     renderCoins();
 	updateCoinAnimation();
+
+	if (checkCollisionWithCoins(carPosition, coins))
+	{
+		score = score + 1;
+	}
 
     drawHUD();
 
@@ -5889,7 +5976,6 @@ void myKeyboard(unsigned char button, int x, int y)
         {
 		if (button == 'r' || button == 'R')
 		{
-            nitros = originalNitros;
 			resetGame();
 		}
 		return;
