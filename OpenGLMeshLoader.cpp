@@ -5731,6 +5731,7 @@ void resetGame() {
     playerTime = 0.0f;
     nitros = originalNitros;
 	coins = originalCoins;
+    timerStarted = false;
     score = 0; 
     sunEffect.reset();
     sunrise.reset();
@@ -6263,6 +6264,8 @@ void myKeyboard(unsigned char button, int x, int y)
 		}
         if (button == 'n' || button == 'N') {
             goToNextLevel(); 
+            resetGame();
+
         }
 		return;
 	}
@@ -6616,7 +6619,27 @@ void LoadAssets2() {
 void goToNextLevel() {
     UnloadAssets();
     LoadAssets2();
-    resetGame();
+
+    timerStarted = false;
+    gameTimer = 90.0f;
+    playerTime = 0.0f;
+    gameOver = false;
+    gameWon = false;
+    isNitroActive = false;
+    carPosition = Vector(0, 0, 0);  // Reset car position
+    carRotation = 0;  // Reset car rotation
+    carSpeed = 0;  // Reset car speed
+    wheelRotationX = 0;  // Reset wheel rotation
+    wheelRotationY = 0;  // Reset wheel rotation
+    sunsetProgress = 0.0f;  // Reset sunset progress
+    gravityEnabled = false;
+    nitros = originalNitros;
+    coins = originalCoins;
+    score = 0;
+    sunEffect.reset();
+    sunrise.reset();
+
+    level = 2;
     currentView = CINEMATIC;
 
     // make my display 2 the current display
