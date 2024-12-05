@@ -448,7 +448,6 @@ float steeringAngle = 0.0f;
 float maxSteeringAngle = 52.50f; // Maximum steering angle in degrees
 float steeringSpeed = 90.0f; // Degrees per second
 float deceleration = 50.0f; // Units per second^2
-
 float carSpeed = 0.0f;
 float maxSpeed = 70.0f; // Maximum speed in units per second
 float acceleration = 9.0f; // Acceleration in units per second^2
@@ -456,6 +455,12 @@ float acceleration = 9.0f; // Acceleration in units per second^2
 float turnSpeed = 90.0f; // Turn speed in degrees per second
 bool isAccelerating = false;
 bool isBraking = false;
+
+// second car controls 
+float acceleration2 = 9.0f; // Acceleration in units per second^2
+float deceleration2 = 50.0f; // Deceleration in units per second^2
+float turnSpeed2 = 150.0f; // Turn speed in degrees per second
+float maxSpeed2 = 30.0f; // Maximum speed in units per second
 
 float cameraDistance = 8.0f; // Distance behind the car
 float cameraHeight = 3.0f; // Height above the car
@@ -4584,36 +4589,35 @@ void handleCarControls(float deltaTime) {
 
 void handleCarControls2(float deltaTime) {
     // Accelerate
-    turnSpeed = 200.0f;
 
     if (isAccelerating) {
-        carSpeed += acceleration * deltaTime;
-        if (carSpeed > maxSpeed && !isNitroActive) carSpeed = maxSpeed;
+        carSpeed += acceleration2 * deltaTime;
+        if (carSpeed > maxSpeed2 && !isNitroActive) carSpeed = maxSpeed2;
     }
     // Brake/Reverse
     else if (isBraking) {
-        carSpeed -= deceleration * deltaTime;
+        carSpeed -= deceleration2 * deltaTime;
         if (carSpeed < -20) carSpeed = -20; // Allow negative speed for reverse
     }
     // Coast (slow down gradually)
     else {
         if (carSpeed > 0) {
-            carSpeed -= deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+            carSpeed -= deceleration2 * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
             if (carSpeed < 0) carSpeed = 0;
         }
         else if (carSpeed < 0) {
-            carSpeed += deceleration * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
+            carSpeed += deceleration2 * 0.5f * deltaTime; // Adjust this factor for desired coasting behavior
             if (carSpeed > 0) carSpeed = 0;
         }
     }
 
     // Turn left
     if (wheelRotationY > 0) {
-        carRotation += turnSpeed * deltaTime * (carSpeed / maxSpeed);
+        carRotation += turnSpeed2 * deltaTime * (carSpeed / maxSpeed2);
     }
     // Turn right
     else if (wheelRotationY < 0) {
-        carRotation -= turnSpeed * deltaTime * (carSpeed / maxSpeed);
+        carRotation -= turnSpeed2 * deltaTime * (carSpeed / maxSpeed2);
     }
 
     // Normalize rotation to 0-360 degrees
@@ -6170,11 +6174,9 @@ void LoadAssets()
 
 void LoadAssets2() {
 
-    if (!moscowModel.LoadModel("models/moscow/scene.gltf")) {
+    if (!moscowModel.LoadModel("models/moscow-test/scene.gltf")) {
 	std::cerr << "Failed to load GLTF model" << std::endl;
     }
-
-    trackTriangles = loadTrackTriangles("models/moscow-test/scene.gltf");
     
 
     if (!bugattiModel.LoadModel("models/bugatti-no-wheels/scene.gltf")) {
