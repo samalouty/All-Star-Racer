@@ -719,6 +719,51 @@ void setupLighting() {
     glLightfv(GL_LIGHT1, GL_SPECULAR, lightColor);
 }
 
+
+// Array to hold the coordinates of the streetlights
+std::vector<std::pair<float, float>> streetlightCoords = {
+     {14.0092f, 12.6268f},
+    {2.79439f, 37.8671f},
+    {1.01146, 77.4396},
+    { -47.6336, 97.3934},
+    {-38.3406, 234.351},
+    {-134.88,198.58},
+    {-164.885, 249.684},
+	{-225.918, 375.122},
+};
+
+// Function to generate random brightness for flickering effect
+float getRandomBrightness() {
+    return 0.5f + static_cast<float>(rand()) / (static_cast<float>(RAND_MAX / 0.5f)); // Range [0.5, 1.0]
+}
+
+
+void renderStreetlights() {
+    glEnable(GL_LIGHTING);
+    glEnable(GL_COLOR_MATERIAL);
+
+    for (size_t i = 0; i < streetlightCoords.size(); ++i) {
+        float brightness = getRandomBrightness(); // Generate random brightness for flicker
+
+        // Set light properties
+        GLfloat lightColor[] = { brightness, brightness, 0.0f, 1.0f }; // Yellow light
+        GLfloat lightPos[] = { streetlightCoords[i].first, 1.0f, streetlightCoords[i].second, 1.0f }; // Position
+		GLfloat lightDir[] = { 0.0f, -1.0f, 0.0f }; // Direction
+
+        // Set attenuation (to limit light spread)
+        glEnable(GL_LIGHT0 + i);
+        glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, lightColor);
+        glLightfv(GL_LIGHT0 + i, GL_POSITION, lightPos);
+        glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, 0.8f);
+        glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, 0.2f);
+        glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 0.1f);
+		//glLightf(GL_LIGHT0 + i, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
+		//glLightf(GL_LIGHT0 + i, GL_SPOT_EXPONENT, 10.0f);          // Intensity falloff
+		glLightfv(GL_LIGHT0 + i, GL_SPOT_DIRECTION, lightDir); // Direction
+    }
+}
+
+
 //=======================================================================
 // Collision Functions
 //=======================================================================
@@ -5541,13 +5586,32 @@ void drawHUD() {
         renderSpeedOMeter(abs(carSpeed * 2.1));
     }
 
-
-    // Draw win text
     if (gameWon) {
-        glColor3f(0.0f, 1.0f, 0.0f); // Green color for "You Win"
+        int scoreTime = 9000 - static_cast<int>(gameTimer * 100);
+
+        std::ostringstream timeStream;
+        timeStream << std::fixed << std::setprecision(2) << playerTime;
+        std::string formattedTime = timeStream.str();
+
+        glColor3f(0.0f, 1.0f, 0.0f); 
+
+        
         glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2);
-        std::string winText = "You Win! Time: " + std::to_string(playerTime) + " seconds";
+        std::string winText = "You Win! Time: " + formattedTime + " seconds";
         for (char c : winText) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        }
+
+        // Second line: "Score: XXXX"
+        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30); 
+        std::string scoreText = "Score: " + std::to_string(scoreTime);
+        for (char c : scoreText) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        }
+
+        glRasterPos2i(WIDTH / 2 - 150, HEIGHT / 2 - 60); // Adjust Y-position for the new line
+        std::string instructionText = "Press R to restart or N to go to the next level";
+        for (char c : instructionText) {
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
         }
     }
@@ -6077,8 +6141,10 @@ void myDisplay2(void) {
     rock2Model.DrawModel();
     glPopMatrix();*/
 
-    renderCar2(); 
+    setupLighting();
+    renderCar2();
     renderCoins();
+    renderStreetlights();
 	updateCoinAnimation();
 
 	if (checkCollisionWithCoins(carPosition, coins))
