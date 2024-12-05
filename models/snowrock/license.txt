@@ -1,0 +1,11 @@
+Model Information:
+* title:	Rocks in the snow - one rock
+* source:	https://sketchfab.com/3d-models/rocks-in-the-snow-one-rock-14273570277c4c7ab3520893616746f6
+* author:	Sebo_the_tramp (https://sketchfab.com/sebastian.cavada.dev)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Rocks in the snow - one rock" (https://sketchfab.com/3d-models/rocks-in-the-snow-one-rock-14273570277c4c7ab3520893616746f6) by Sebo_the_tramp (https://sketchfab.com/sebastian.cavada.dev) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

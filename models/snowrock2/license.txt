@@ -1,0 +1,11 @@
+Model Information:
+* title:	Scan #3 : Snow Rock
+* source:	https://sketchfab.com/3d-models/scan-3-snow-rock-d4c7890990c54d028e5417d9549023fe
+* author:	id_r_mcgregor (https://sketchfab.com/ID_R_McGregor)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Scan #3 : Snow Rock" (https://sketchfab.com/3d-models/scan-3-snow-rock-d4c7890990c54d028e5417d9549023fe) by id_r_mcgregor (https://sketchfab.com/ID_R_McGregor) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
