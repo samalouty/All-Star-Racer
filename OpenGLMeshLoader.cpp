@@ -17,6 +17,7 @@
 #include <string>
 
 #define M_PI 3.14159265358979323846
+void goToNextLevel(); 
 
 
 GLuint shaderProgram;
@@ -53,201 +54,208 @@ public:
 
 class GLTFModel {
 public:
-	bool LoadModel(const std::string& filename) {
-		tinygltf::TinyGLTF loader;
-		std::string err;
-		std::string warn;
+    bool LoadModel(const std::string& filename) {
+        tinygltf::TinyGLTF loader;
+        std::string err;
+        std::string warn;
 
-		bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+        bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
 
-		if (!warn.empty()) {
-			std::cout << "GLTF loading warning: " << warn << std::endl;
-		}
+        if (!warn.empty()) {
+            std::cout << "GLTF loading warning: " << warn << std::endl;
+        }
 
-		if (!err.empty()) {
-			std::cerr << "GLTF loading error: " << err << std::endl;
-		}
+        if (!err.empty()) {
+            std::cerr << "GLTF loading error: " << err << std::endl;
+        }
 
-		if (!ret) {
-			std::cerr << "Failed to load glTF: " << filename << std::endl;
-			return false;
-		}
+        if (!ret) {
+            std::cerr << "Failed to load glTF: " << filename << std::endl;
+            return false;
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	void DrawModel(const glm::mat4& transform = glm::mat4(1.0f)) const {
-		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
-		for (size_t i = 0; i < scene.nodes.size(); ++i) {
-			DrawNode(scene.nodes[i], transform);
-		}
-	}
+    void DrawModel(const glm::mat4& transform = glm::mat4(1.0f)) const {
+        const tinygltf::Scene& scene = model.scenes[model.defaultScene];
+        for (size_t i = 0; i < scene.nodes.size(); ++i) {
+            DrawNode(scene.nodes[i], transform);
+        }
+    }
+
+    void UnloadModel() {
+        // Delete OpenGL textures
+        for (const auto& entry : textureCache) {
+            glDeleteTextures(1, &entry.second);
+        }
+        textureCache.clear();
+
+        // Clear model data
+        model = tinygltf::Model();
+        std::cout << "Model and textures unloaded successfully." << std::endl;
+    }
 
 private:
-	tinygltf::Model model;
-	mutable std::unordered_map<int, GLuint> textureCache;
+    tinygltf::Model model;
+    mutable std::unordered_map<int, GLuint> textureCache;
 
-	void DrawNode(int nodeIndex, const glm::mat4& parentTransform) const {
-		const tinygltf::Node& node = model.nodes[nodeIndex];
+    void DrawNode(int nodeIndex, const glm::mat4& parentTransform) const {
+        const tinygltf::Node& node = model.nodes[nodeIndex];
 
-		glm::mat4 localTransform = glm::mat4(1.0f);
+        glm::mat4 localTransform = glm::mat4(1.0f);
 
-		if (node.matrix.size() == 16) {
-			localTransform = glm::make_mat4(node.matrix.data());
-		}
-		else {
-			if (node.translation.size() == 3) {
-				localTransform = glm::translate(localTransform,
-					glm::vec3(node.translation[0], node.translation[1], node.translation[2]));
-			}
+        if (node.matrix.size() == 16) {
+            localTransform = glm::make_mat4(node.matrix.data());
+        }
+        else {
+            if (node.translation.size() == 3) {
+                localTransform = glm::translate(localTransform,
+                    glm::vec3(node.translation[0], node.translation[1], node.translation[2]));
+            }
 
-			if (node.rotation.size() == 4) {
-				glm::quat q = glm::quat(node.rotation[3], node.rotation[0],
-					node.rotation[1], node.rotation[2]);
-				localTransform = localTransform * glm::mat4_cast(q);
-			}
+            if (node.rotation.size() == 4) {
+                glm::quat q = glm::quat(node.rotation[3], node.rotation[0],
+                    node.rotation[1], node.rotation[2]);
+                localTransform = localTransform * glm::mat4_cast(q);
+            }
 
-			if (node.scale.size() == 3) {
-				localTransform = glm::scale(localTransform,
-					glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
-			}
-		}
+            if (node.scale.size() == 3) {
+                localTransform = glm::scale(localTransform,
+                    glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
+            }
+        }
 
-		glm::mat4 nodeTransform = parentTransform * localTransform;
+        glm::mat4 nodeTransform = parentTransform * localTransform;
 
-		if (node.mesh >= 0) {
-			DrawMesh(model.meshes[node.mesh], nodeTransform);
-		}
+        if (node.mesh >= 0) {
+            DrawMesh(model.meshes[node.mesh], nodeTransform);
+        }
 
-		for (int child : node.children) {
-			DrawNode(child, nodeTransform);
-		}
-	}
+        for (int child : node.children) {
+            DrawNode(child, nodeTransform);
+        }
+    }
 
-	void DrawMesh(const tinygltf::Mesh& mesh, const glm::mat4& transform) const {
-		glPushMatrix();
-		glMultMatrixf(glm::value_ptr(transform));
+    void DrawMesh(const tinygltf::Mesh& mesh, const glm::mat4& transform) const {
+        glPushMatrix();
+        glMultMatrixf(glm::value_ptr(transform));
 
-		for (const auto& primitive : mesh.primitives) {
-			if (primitive.indices < 0) continue;
+        for (const auto& primitive : mesh.primitives) {
+            if (primitive.indices < 0) continue;
 
-			// Set material properties before drawing
-			if (primitive.material >= 0) {
-				const auto& material = model.materials[primitive.material];
-				SetMaterial(material);
-			}
+            if (primitive.material >= 0) {
+                const auto& material = model.materials[primitive.material];
+                SetMaterial(material);
+            }
 
-			// Get vertex positions
-			const auto& posAccessor = model.accessors[primitive.attributes.at("POSITION")];
-			const auto& posView = model.bufferViews[posAccessor.bufferView];
-			const float* positions = reinterpret_cast<const float*>(
-				&model.buffers[posView.buffer].data[posView.byteOffset + posAccessor.byteOffset]);
+            const auto& posAccessor = model.accessors[primitive.attributes.at("POSITION")];
+            const auto& posView = model.bufferViews[posAccessor.bufferView];
+            const float* positions = reinterpret_cast<const float*>(
+                &model.buffers[posView.buffer].data[posView.byteOffset + posAccessor.byteOffset]);
 
-			// Get texture coordinates if available
-			const float* texcoords = nullptr;
-			if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end()) {
-				const auto& texAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
-				const auto& texView = model.bufferViews[texAccessor.bufferView];
-				texcoords = reinterpret_cast<const float*>(
-					&model.buffers[texView.buffer].data[texView.byteOffset + texAccessor.byteOffset]);
-			}
+            const float* texcoords = nullptr;
+            if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end()) {
+                const auto& texAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
+                const auto& texView = model.bufferViews[texAccessor.bufferView];
+                texcoords = reinterpret_cast<const float*>(
+                    &model.buffers[texView.buffer].data[texView.byteOffset + texAccessor.byteOffset]);
+            }
 
-			// Get indices
-			const auto& indexAccessor = model.accessors[primitive.indices];
-			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
-			const void* indices = &model.buffers[indexView.buffer].data[indexView.byteOffset +
-				indexAccessor.byteOffset];
+            const auto& indexAccessor = model.accessors[primitive.indices];
+            const auto& indexView = model.bufferViews[indexAccessor.bufferView];
+            const void* indices = &model.buffers[indexView.buffer].data[indexView.byteOffset +
+                indexAccessor.byteOffset];
 
-			// Draw the primitive
-			glBegin(GL_TRIANGLES);
-			for (size_t i = 0; i < indexAccessor.count; i++) {
-				unsigned int idx;
-				switch (indexAccessor.componentType) {
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-					idx = ((unsigned short*)indices)[i];
-					break;
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-					idx = ((unsigned int*)indices)[i];
-					break;
-				default:
-					continue;
-				}
+            glBegin(GL_TRIANGLES);
+            for (size_t i = 0; i < indexAccessor.count; i++) {
+                unsigned int idx;
+                switch (indexAccessor.componentType) {
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    idx = ((unsigned short*)indices)[i];
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    idx = ((unsigned int*)indices)[i];
+                    break;
+                default:
+                    continue;
+                }
 
-				if (texcoords) {
-					glTexCoord2f(texcoords[idx * 2], texcoords[idx * 2 + 1]);
-				}
-				glVertex3fv(&positions[idx * 3]);
-			}
-			glEnd();
-		}
+                if (texcoords) {
+                    glTexCoord2f(texcoords[idx * 2], texcoords[idx * 2 + 1]);
+                }
+                glVertex3fv(&positions[idx * 3]);
+            }
+            glEnd();
+        }
 
-		glPopMatrix();
-	}
+        glPopMatrix();
+    }
 
-	void SetMaterial(const tinygltf::Material& material) const {
-		// Set default material color
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    void SetMaterial(const tinygltf::Material& material) const {
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-		if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-			const auto& texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-			if (texture.source >= 0) {
-				GLuint textureId = GetOrCreateTexture(texture.source);
-				if (textureId != 0) {
-					glEnable(GL_TEXTURE_2D);
-					glBindTexture(GL_TEXTURE_2D, textureId);
-				}
-			}
-		}
-		else if (!material.pbrMetallicRoughness.baseColorFactor.empty()) {
-			glColor4f(
-				material.pbrMetallicRoughness.baseColorFactor[0],
-				material.pbrMetallicRoughness.baseColorFactor[1],
-				material.pbrMetallicRoughness.baseColorFactor[2],
-				material.pbrMetallicRoughness.baseColorFactor[3]
-			);
-		}
-	}
+        if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+            const auto& texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+            if (texture.source >= 0) {
+                GLuint textureId = GetOrCreateTexture(texture.source);
+                if (textureId != 0) {
+                    glEnable(GL_TEXTURE_2D);
+                    glBindTexture(GL_TEXTURE_2D, textureId);
+                }
+            }
+        }
+        else if (!material.pbrMetallicRoughness.baseColorFactor.empty()) {
+            glColor4f(
+                material.pbrMetallicRoughness.baseColorFactor[0],
+                material.pbrMetallicRoughness.baseColorFactor[1],
+                material.pbrMetallicRoughness.baseColorFactor[2],
+                material.pbrMetallicRoughness.baseColorFactor[3]
+            );
+        }
+    }
 
-	GLuint GetOrCreateTexture(int sourceIndex) const {
-		if (textureCache.find(sourceIndex) != textureCache.end()) {
-			return textureCache.at(sourceIndex);
-		}
+    GLuint GetOrCreateTexture(int sourceIndex) const {
+        if (textureCache.find(sourceIndex) != textureCache.end()) {
+            return textureCache.at(sourceIndex);
+        }
 
-		const auto& image = model.images[sourceIndex];
-		GLuint textureId;
-		glGenTextures(1, &textureId);
-		glBindTexture(GL_TEXTURE_2D, textureId);
+        const auto& image = model.images[sourceIndex];
+        GLuint textureId;
+        glGenTextures(1, &textureId);
+        glBindTexture(GL_TEXTURE_2D, textureId);
 
-		GLenum format = GL_RGBA;
-		if (image.component == 3) {
-			format = GL_RGB;
-		}
+        GLenum format = GL_RGBA;
+        if (image.component == 3) {
+            format = GL_RGB;
+        }
 
-		glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, &image.image[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, &image.image[0]);
 
-		GLenum type = GL_UNSIGNED_BYTE;
-		if (image.bits == 16) {
-			type = GL_UNSIGNED_SHORT;
-		}
+        GLenum type = GL_UNSIGNED_BYTE;
+        if (image.bits == 16) {
+            type = GL_UNSIGNED_SHORT;
+        }
 
-		GLint internalFormat = (format == GL_RGB) ? GL_RGB8 : GL_RGBA8;
+        GLint internalFormat = (format == GL_RGB) ? GL_RGB8 : GL_RGBA8;
 
-		GLint buildMipmapsResult = gluBuild2DMipmaps(GL_TEXTURE_2D, internalFormat, image.width, image.height, format, type, image.image.data());
+        GLint buildMipmapsResult = gluBuild2DMipmaps(GL_TEXTURE_2D, internalFormat, image.width, image.height, format, type, image.image.data());
 
-		if (buildMipmapsResult != 0) {
-			std::cerr << "Failed to build mipmaps for texture. GLU error: " << gluErrorString(buildMipmapsResult) << std::endl;
-			glDeleteTextures(1, &textureId);
-			return 0;
-		}
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        if (buildMipmapsResult != 0) {
+            std::cerr << "Failed to build mipmaps for texture. GLU error: " << gluErrorString(buildMipmapsResult) << std::endl;
+            glDeleteTextures(1, &textureId);
+            return 0;
+        }
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		textureCache[sourceIndex] = textureId;
-		return textureId;
-	}
+        textureCache[sourceIndex] = textureId;
+        return textureId;
+    }
 };
+
 
 
 struct Triangle {
@@ -616,7 +624,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 2; 
+int level = 1; 
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -890,9 +898,6 @@ struct Vertex {
     Vertex(float x, float y, float z) : x(x), y(y), z(z) {}
 
 };
-
-std::vector<Triangle> trackTriangles;
-
 
 std::vector<Vertex> trackVertices = {
     {76.6958, 0, 127.19},
@@ -6240,6 +6245,11 @@ void myDisplay2(void) {
 //=======================================================================
 // Keyboard Function
 //=======================================================================
+
+
+
+
+
 void myKeyboard(unsigned char button, int x, int y)
 {
     if (isRespawning || collisionRecoil > 0) {
@@ -6251,6 +6261,9 @@ void myKeyboard(unsigned char button, int x, int y)
 		{
 			resetGame();
 		}
+        if (button == 'n' || button == 'N') {
+            goToNextLevel(); 
+        }
 		return;
 	}
 	switch (button)
@@ -6529,6 +6542,20 @@ void LoadAssets()
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
 }
 
+void UnloadAssets() {
+    gltfModel1.UnloadModel();
+    carModel1.UnloadModel();
+    redWheelsFrontLeft1.UnloadModel();
+    redWheelsFrontRight1.UnloadModel();
+    redWheelsBackLeft1.UnloadModel();
+    redWheelsBackRight1.UnloadModel();
+    coneModel.UnloadModel();
+    nitroModel.UnloadModel();
+    finishModel.UnloadModel();
+    horizontalTraffic.UnloadModel();
+    trafficObstacle.UnloadModel();
+}
+
 // Load Level 2
 
 void LoadAssets2() {
@@ -6583,6 +6610,18 @@ void LoadAssets2() {
 
 
     
+
+}
+
+void goToNextLevel() {
+    UnloadAssets();
+    LoadAssets2();
+    resetGame();
+    currentView = CINEMATIC;
+
+    // make my display 2 the current display
+    glutDisplayFunc(myDisplay2);
+    glutPostRedisplay();
 
 }
 
