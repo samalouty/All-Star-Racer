@@ -288,8 +288,8 @@ GLdouble zFar = 10000;
 
 class SunriseEffect {
 private:
-    float time; // Time elapsed since start of effect
-    float duration; // Total duration of effect in seconds
+    float time;      // Time elapsed since start of effect
+    float duration;  // Total duration of effect in seconds
 
     // Linear interpolation function
     float lerp(float a, float b, float t) const {
@@ -303,6 +303,11 @@ private:
 
 public:
     SunriseEffect(float duration = 300.0f) : time(0.0f), duration(duration) {}
+
+    // Reset function to restart the effect
+    void reset() {
+        time = 0.0f;
+    }
 
     void update(float deltaTime) {
         time += deltaTime;
@@ -333,10 +338,10 @@ public:
 
 class MovingSunEffect {
 private:
-    float time;
-    float duration;
-    float sunPosition[3];
-    float sunBrightness;
+    float time;         // Time elapsed since start of effect
+    float duration;     // Total duration of effect in seconds
+    float sunPosition[3]; // Sun position in the sky
+    float sunBrightness;  // Sun brightness
 
     float lerp(float a, float b, float t) const {
         return a + t * (b - a);
@@ -351,13 +356,22 @@ public:
         : time(0.0f), duration(duration), sunBrightness(0.0f) {
         sunPosition[0] = -1.0f; // Start from the left
         sunPosition[1] = -0.5f; // Start below the horizon
-        sunPosition[2] = 1.0f;
+        sunPosition[2] = 1.0f;  // Sun is initially at a distant point on the z-axis
+    }
+
+    // Reset function to restart the effect
+    void reset() {
+        time = 0.0f;
+        sunPosition[0] = -1.0f; // Reset to initial position
+        sunPosition[1] = -0.5f; // Reset to initial position
+        sunPosition[2] = 1.0f;  // Reset to initial position
+        sunBrightness = 0.0f;   // Reset brightness
     }
 
     void update(float deltaTime) {
         time += deltaTime;
         if (time > duration) {
-            time = duration;
+            time = duration; // Cap at maximum duration
         }
 
         float t = smoothStep(time / duration);
@@ -416,6 +430,7 @@ public:
         glEnable(GL_LIGHT0);
     }
 };
+
 
 struct Cone {
     float x;
@@ -5570,7 +5585,8 @@ void resetGame() {
     playerTime = 0.0f;
     nitros = originalNitros;
 	coins = originalCoins;
-
+    sunEffect.reset();
+    sunrise.reset();
 }
 
 //=======================================================================
@@ -6033,9 +6049,9 @@ void myDisplay2(void) {
     sunEffect.update(deltaTime);
 
     // Clear the screen and apply the sunrise effect
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     sunrise.apply();
     sunEffect.apply();
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     updateCamera();
 
     // draw moscow 
