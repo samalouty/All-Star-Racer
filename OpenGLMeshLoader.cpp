@@ -308,9 +308,18 @@ struct Coin {
     float x;
     float y;
     float z;
+    float animationPhase;
 
-    Coin(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+    Coin(float _x, float _y, float _z, float _animationPhase) : x(_x), y(_y), z(_z), animationPhase(_animationPhase) {}
 };
+
+//struct Coin {
+//    float x;
+//    float y;
+//    float z;
+//
+//    Coin(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+//};
 
 std::vector<Cone> cones = {
     Cone(-1.35632f, 1.3f, 65.1768f),
@@ -357,40 +366,72 @@ std::vector<Vector> barriers = {
 };
 
 std::vector<Coin> coins = {
-    //Coin(7.82275, 1.5, 11.7109),
-    Coin(7.92534, 1.5, 27.4013),
-    Coin(10.554f, 1.5f, 52.6967f),
-   /* Coin(1.85373f, 1.5f, 67.2549f),*/
-    Coin(-10.9683f, 1.5f, 87.0919f),
-    Coin(-22.6874f, 1.5f, 92.2444f),
-    Coin(-34.7078f, 1.5f, 76.8697f),
-    Coin(-57.7044f, 1.5f, 56.5818f),
-    Coin(-68.7227f, 1.5f, 75.522f),
-    Coin(-50.6736f, 1.5f, 96.5191f),
-    Coin(-28.4619f, 1.5f, 146.144f),
-    Coin(-10.6378f, 1.5f, 170.759f),
-    Coin(-17.725f, 1.5f, 204.849f),
-    Coin(-40.5779f, 1.5f, 230.781f),
-    Coin(-82.1536f, 1.5f, 249.69f),
-    Coin(-110.309f, 1.5f, 213.295f),
-    Coin(-161.206f, 1.5f, 173.604f),
-    Coin(-196.742f, 1.5f, 195.568f),
-    Coin(-185.973f, 1.5f, 227.619f),
-    Coin(-167.631f, 1.5f, 260.432f),
-    Coin(-157.681f, 1.5f, 289.419f),
-    Coin(-171.671f, 1.5f, 310.134f),
-    Coin(-175.742f, 1.5f, 327.887f),
-    Coin(-162.257f, 1.5f, 363.324f),
-    Coin(-215.037f, 1.5f, 231.271f),
-    Coin(-227.006f, 1.5f, 264.967f),
-    Coin(-237.439f, 1.5f, 294.338f),
-    Coin(-165.869f, 1.5f, 379.538f),
-    Coin(-181.904f, 1.5f, 398.383f),
-    Coin(-209.562f, 1.5f, 379.815f),
-    Coin(-234.212f, 1.5f, 335.71f),
-    Coin(-216.211f, 1.5f, 326.787f),
-    Coin(-183.778f, 1.5f, 355.048f)
+    Coin(7.92534, 1, 27.4013, 0),
+    Coin(10.554f, 1, 52.6967f, 0),
+    Coin(-10.9683f, 1, 87.0919f, 0),
+    Coin(-22.6874f, 1, 92.2444f, 0),
+    Coin(-34.7078f, 1, 76.8697f, 0),
+    Coin(-57.7044f, 1, 56.5818f, 0),
+    Coin(-68.7227f, 1, 75.522f, 0),
+    Coin(-50.6736f, 1, 96.5191f, 0),
+    Coin(-28.4619f, 1, 146.144f, 0),
+    Coin(-10.6378f, 1, 170.759f, 0),
+    Coin(-17.725f, 1, 204.849f, 0),
+    Coin(-40.5779f, 1, 230.781f, 0),
+    Coin(-82.1536f, 1, 249.69f, 0),
+    Coin(-110.309f, 1, 213.295f, 0),
+    Coin(-161.206f, 1, 173.604f, 0),
+    Coin(-196.742f, 1, 195.568f, 0),
+    Coin(-185.973f, 1, 227.619f, 0),
+    Coin(-167.631f, 1, 260.432f, 0),
+    Coin(-157.681f, 1, 289.419f, 0),
+    Coin(-171.671f, 1, 310.134f, 0),
+    Coin(-175.742f, 1, 327.887f, 0),
+    Coin(-162.257f, 1, 363.324f, 0),
+    Coin(-215.037f, 1, 231.271f, 0),
+    Coin(-227.006f, 1, 264.967f, 0),
+    Coin(-237.439f, 1, 294.338f, 0),
+    Coin(-165.869f, 1, 379.538f, 0),
+    Coin(-181.904f, 1, 398.383f, 0),
+    Coin(-209.562f, 1, 379.815f, 0),
+    Coin(-234.212f, 1, 335.71f, 0),
+    Coin(-216.211f, 1, 326.787f, 0),
+    Coin(-183.778f, 1, 355.048f, 0)
 };    
+
+std::vector<Coin> originalCoins = {
+    Coin(7.92534, 1, 27.4013, 0),
+    Coin(10.554f, 1, 52.6967f, 0),
+    Coin(-10.9683f, 1, 87.0919f, 0),
+    Coin(-22.6874f, 1, 92.2444f, 0),
+    Coin(-34.7078f, 1, 76.8697f, 0),
+    Coin(-57.7044f, 1, 56.5818f, 0),
+    Coin(-68.7227f, 1, 75.522f, 0),
+    Coin(-50.6736f, 1, 96.5191f, 0),
+    Coin(-28.4619f, 1, 146.144f, 0),
+    Coin(-10.6378f, 1, 170.759f, 0),
+    Coin(-17.725f, 1, 204.849f, 0),
+    Coin(-40.5779f, 1, 230.781f, 0),
+    Coin(-82.1536f, 1, 249.69f, 0),
+    Coin(-110.309f, 1, 213.295f, 0),
+    Coin(-161.206f, 1, 173.604f, 0),
+    Coin(-196.742f, 1, 195.568f, 0),
+    Coin(-185.973f, 1, 227.619f, 0),
+    Coin(-167.631f, 1, 260.432f, 0),
+    Coin(-157.681f, 1, 289.419f, 0),
+    Coin(-171.671f, 1, 310.134f, 0),
+    Coin(-175.742f, 1, 327.887f, 0),
+    Coin(-162.257f, 1, 363.324f, 0),
+    Coin(-215.037f, 1, 231.271f, 0),
+    Coin(-227.006f, 1, 264.967f, 0),
+    Coin(-237.439f, 1, 294.338f, 0),
+    Coin(-165.869f, 1, 379.538f, 0),
+    Coin(-181.904f, 1, 398.383f, 0),
+    Coin(-209.562f, 1, 379.815f, 0),
+    Coin(-234.212f, 1, 335.71f, 0),
+    Coin(-216.211f, 1, 326.787f, 0),
+    Coin(-183.778f, 1, 355.048f, 0)
+};
 
 Vector Eye(20, 5, 20);
 Vector At(0, 0, 0);
@@ -408,7 +449,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 2; 
+int level = 1; 
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -486,7 +527,7 @@ GLfloat headlight_dir[] = { 0.0f, 0.0f, -1.0f };        // Direction of headligh
 bool gameOver = false;
 Vector lastCarPosition(0, 0, 0);
 bool gameWon = false;
-float gameTimer = 5000.0f; // 90 seconds timer
+float gameTimer = 90.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
 
@@ -503,6 +544,8 @@ float nitroTimer = 0.0f;
 float nitroDuration = 3.0f; // 3 seconds of nitro boost
 float nitroSpeedMultiplier = 20;
 float lastSpeed = 0.0f;
+
+int score = 0;
 
 // Function to set up the headlights
 void setupLighting() {
@@ -2773,6 +2816,8 @@ std::vector<Vertex> trackVertices = {
 
 
 std::vector<Vertex> trackVertices2 = {
+    {-220.059, 0, 308.132}, 
+    {-84.9432, 0, 230.151}, 
     {-53.0841, 0, -26.9856},
     {-44.3211, 0, -24.9541}, 
     {-35.3845, 0, -24.2557},
@@ -4482,6 +4527,18 @@ bool checkCollisionWithNitros(Vector& carPosition, std::vector<Nitro>& nitros, f
     return false; // No collision
 }
 
+bool checkCollisionWithCoins(Vector& carPosition, std::vector<Coin>& coins, float collisionThreshold = 2.0f) {
+    for (auto it = coins.begin(); it != coins.end(); ++it) {
+        Vector coinPosition(it->x, it->y, it->z);
+        if (carPosition.distanceToNoY(coinPosition) <= collisionThreshold) {
+            coins.erase(it); 
+            activateNitro(); 
+            return true; // Collision detected
+        }
+    }
+    return false; // No collision
+}
+
 void startRespawn() {
     isRespawning = true;
     respawnTimer = 0.0f;
@@ -4563,8 +4620,8 @@ void updateCarPosition(float deltaTime) {
     carPosition.z += cos(radians) * carSpeed * deltaTime;
 
     if (isPointInTrack(trackVertices, carPosition)) {
-        std::cout << "Car Pos: ";
-        carPosition.print();
+        //std::cout << "Car Pos: ";
+        //carPosition.print();
     }
     else {
         gravityEnabled = true;
@@ -4683,8 +4740,8 @@ void updateCarPosition2(float deltaTime) {
 
 
     if (isPointInTrack(trackVertices2, carPosition, 9.0f)) {
-        std::cout << "Car Pos: ";
-        carPosition.print();
+        /*std::cout << "Car Pos: ";
+        carPosition.print();*/
         collisionDetected = false;
     }
     else {
@@ -4710,6 +4767,11 @@ void updateCarPosition2(float deltaTime) {
             lastCarPosition = carPosition;
         }
     }
+    if (!gameWon && score == 27) {
+        /*printf("fffffffffffffffff");*/
+        gameWon = true;
+        playerTime = 90.0f - gameTimer; // Calculate player's time
+    }
 }
 
 
@@ -4734,6 +4796,16 @@ void updateNitroAnimation() {
             nitro.animationPhase -= 360.0f;
         }
         nitro.y = nitro.y + sin(nitro.animationPhase) * 0.08f;
+    }
+}
+
+void updateCoinAnimation() {
+    for (auto& coin : coins) {
+        coin.animationPhase += 0.5f;
+        if (coin.animationPhase > 360.0f) {
+            coin.animationPhase -= 360.0f;
+        }
+        coin.y = coin.y + sin(coin.animationPhase) * 0.08f;
     }
 }
 
@@ -5067,7 +5139,7 @@ void drawGameOverText() {
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
 
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHTING);
     glEnable(GL_TEXTURE_2D);
 }
 
@@ -5191,7 +5263,7 @@ void renderSpeedOMeter(float speed) {
     glDisable(GL_BLEND);
 
     // Re-enable lighting and depth testing
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
 
     glMatrixMode(GL_PROJECTION);
@@ -5345,13 +5417,27 @@ void drawHUD() {
     float textY = stopwatchY + stopwatchHeight / 2 + 5;
     glRasterPos2f(textX, textY);
     for (char c : timerText) {
-        glutBitmapCharacter(GLUT_BITMAP_9_BY_15, c);
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+    if (level == 2) {
+        // Draw score of the player
+        glColor3f(0.0f, 1.0f, 0.0f); // Bright green for digital display
+        float scoreX = stopwatchX + 15;
+        float scoreY = stopwatchY + stopwatchHeight / 2 - 20;
+
+        std::string scoreText = "Score: " + std::to_string(score);
+        glRasterPos2f(scoreX, scoreY);
+
+        for (char c : scoreText) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        }
     }
 
     // Render speedometer if game is active
     if (!gameWon && !gameOver) {
         renderSpeedOMeter(abs(carSpeed * 2.1));
     }
+
 
     // Draw win text
     if (gameWon) {
@@ -5369,7 +5455,7 @@ void drawHUD() {
     }
 
     // Re-enable lighting and depth testing
-    glEnable(GL_LIGHTING);
+    //glEnable(GL_LIGHTING);
     glEnable(GL_DEPTH_TEST);
 
     glMatrixMode(GL_PROJECTION);
@@ -5394,6 +5480,8 @@ void resetGame() {
     gameWon = false;
     gameTimer = 90.0f;
     playerTime = 0.0f;
+    nitros = originalNitros;
+	coins = originalCoins;
 
 }
 
@@ -5440,34 +5528,6 @@ void myInit(void)
 //=======================================================================
 // Render Functions
 //=======================================================================
-void RenderGround()
-{
-	glDisable(GL_LIGHTING);	// Disable lighting 
-
-	glColor3f(0.6, 0.6, 0.6);	// Dim the ground texture a bit
-
-	glEnable(GL_TEXTURE_2D);	// Enable 2D texturing
-
-	glBindTexture(GL_TEXTURE_2D, tex_ground.texture[0]);	// Bind the ground texture
-
-	glPushMatrix();
-	glBegin(GL_QUADS);
-	glNormal3f(0, 1, 0);	// Set quad normal direction.
-	glTexCoord2f(0, 0);		// Set tex coordinates ( Using (0,0) -> (5,5) with texture wrapping set to GL_REPEAT to simulate the ground repeated grass texture).
-	glVertex3f(-20, 0, -20);
-	glTexCoord2f(5, 0);
-	glVertex3f(20, 0, -20);
-	glTexCoord2f(5, 5);
-	glVertex3f(20, 0, 20);
-	glTexCoord2f(0, 5);
-	glVertex3f(-20, 0, 20);
-	glEnd();
-	glPopMatrix();
-
-	glEnable(GL_LIGHTING);	// Enable lighting again for other entites coming throung the pipeline.
-
-	glColor3f(1, 1, 1);	// Set material back to white instead of grey used for the ground texture.
-}
 
 void renderCones() {
     for (const auto& cone : cones) {
@@ -5482,9 +5542,12 @@ void renderCones() {
 
 void renderCoins() {
     for (const auto& coin : coins) {
+        float rotation = -coin.animationPhase * 45;
+
         glPushMatrix();
         glTranslatef(coin.x, coin.y, coin.z);
         glRotatef(90, 1, 0, 0);
+        glRotatef(rotation, 0, 0, 1);
         glScalef(0.5, 0.5, 0.5);
         egpModel.DrawModel();
         glPopMatrix();
@@ -5890,11 +5953,30 @@ void myDisplay2(void) {
     moscowModel.DrawModel();
     glPopMatrix();
 
+   /* glPushMatrix();
+    glTranslatef(1, 1, 2);
+    glRotatef(150, 1, 0, 0);
+    glScalef(1, 1, 1);
+    rock1Model.DrawModel();
+    glPopMatrix();*/
+
+    /*glPushMatrix();
+    glTranslatef(5, 1, 1);
+    glRotatef(70, 1, 0, 0);
+    glScalef(1, 1, 1);
+    rock2Model.DrawModel();
+    glPopMatrix();*/
+
     setupLighting();
-    renderCar2(); 
+    renderCar2();
     renderCoins();
     renderStreetlights();
+	updateCoinAnimation();
 
+	if (checkCollisionWithCoins(carPosition, coins))
+	{
+		score = score + 1;
+	}
 
     drawHUD();
 
@@ -5915,7 +5997,6 @@ void myKeyboard(unsigned char button, int x, int y)
         {
 		if (button == 'r' || button == 'R')
 		{
-            nitros = originalNitros;
 			resetGame();
 		}
 		return;
