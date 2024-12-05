@@ -288,25 +288,34 @@ GLdouble zFar = 10000;
 
 class SunriseEffect {
 private:
-    float time;      // Time elapsed since start of effect
-    float duration;  // Total duration of effect in seconds
+    float time;         // Time elapsed since start of effect
+    float duration;     // Total duration of effect in seconds
+    float sunPosition[3]; // Sun position in the sky
+    float sunBrightness;  // Sun brightness
 
-    // Linear interpolation function
     float lerp(float a, float b, float t) const {
         return a + t * (b - a);
     }
 
-    // Smooth step function for easing
     float smoothStep(float t) const {
         return t * t * (3 - 2 * t);
     }
 
 public:
-    SunriseEffect(float duration = 300.0f) : time(0.0f), duration(duration) {}
+    SunriseEffect(float duration = 300.0f)
+        : time(0.0f), duration(duration), sunBrightness(0.0f) {
+        sunPosition[0] = -1.0f; // Start from the left
+        sunPosition[1] = -0.5f; // Start below the horizon
+        sunPosition[2] = 1.0f;  // Sun is initially at a distant point on the z-axis
+    }
 
     // Reset function to restart the effect
     void reset() {
         time = 0.0f;
+        sunPosition[0] = -1.0f; // Reset to initial position
+        sunPosition[1] = -0.5f; // Reset to initial position
+        sunPosition[2] = 1.0f;  // Reset to initial position
+        sunBrightness = 0.0f;   // Reset brightness
     }
 
     void update(float deltaTime) {
@@ -314,25 +323,50 @@ public:
         if (time > duration) {
             time = duration; // Cap at maximum duration
         }
+
+        float t = smoothStep(time / duration);
+
+        // Move the sun from left to right and up (sunrise motion)
+        sunPosition[0] = lerp(-1.0f, 1.0f, t);
+        sunPosition[1] = lerp(-0.5f, 0.5f, t);
+
+        // Increase sun brightness
+        sunBrightness = lerp(0.0f, 1.0f, t);
     }
 
     void apply() {
-        float t = time / duration; // Normalized time (0 to 1)
-        t = smoothStep(t); // Apply easing for smoother transition
+        float t = smoothStep(time / duration);
 
-        // Dark blue sky color
-        float startR = 0.0f, startG = 0.0f, startB = 0.2f;
+        // Sky color transition (sunrise colors)
+        float startR = 0.0f, startG = 0.0f, startB = 0.2f; // Dark blue
+        float endR = 0.5f, endG = 0.7f, endB = 1.0f; // Light blue
 
-        // Light blue sky color
-        float endR = 0.5f, endG = 0.7f, endB = 1.0f;
-
-        // Interpolate between dark blue and light blue
         float r = lerp(startR, endR, t);
         float g = lerp(startG, endG, t);
         float b = lerp(startB, endB, t);
 
-        // Set the clear color
         glClearColor(r, g, b, 1.0f);
+
+        // Set up directional light
+        float lightAmbient[] = { 0.1f, 0.1f, 0.1f, 1.0f };
+        float lightDiffuse[] = { 1.0f, 0.9f, 0.7f, 1.0f };
+        float lightSpecular[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+
+        // Apply sun brightness to light intensity
+        for (int i = 0; i < 3; ++i) {
+            lightAmbient[i] *= sunBrightness;
+            lightDiffuse[i] *= sunBrightness;
+            lightSpecular[i] *= sunBrightness;
+        }
+
+        glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+        glLightfv(GL_LIGHT0, GL_SPECULAR, lightSpecular);
+        glLightfv(GL_LIGHT0, GL_POSITION, sunPosition);
+
+        // Enable lighting
+        glEnable(GL_LIGHTING);
+        glEnable(GL_LIGHT0);
     }
 };
 
@@ -387,24 +421,13 @@ public:
     void apply() {
         float t = smoothStep(time / duration);
 
-        // Sky color transition (dawn colors)
-        float startR = 0.1f, startG = 0.1f, startB = 0.2f;
-        float midR = 0.7f, midG = 0.4f, midB = 0.3f;
-        float endR = 0.5f, endG = 0.7f, endB = 1.0f;
+        // Sky color transition (sunrise colors)
+        float startR = 0.0f, startG = 0.0f, startB = 0.2f; // Dark blue
+        float endR = 0.5f, endG = 0.7f, endB = 1.0f; // Light blue
 
-        float r, g, b;
-        if (t < 0.5f) {
-            float t2 = t * 2.0f;
-            r = lerp(startR, midR, t2);
-            g = lerp(startG, midG, t2);
-            b = lerp(startB, midB, t2);
-        }
-        else {
-            float t2 = (t - 0.5f) * 2.0f;
-            r = lerp(midR, endR, t2);
-            g = lerp(midG, endG, t2);
-            b = lerp(midB, endB, t2);
-        }
+        float r = lerp(startR, endR, t);
+        float g = lerp(startG, endG, t);
+        float b = lerp(startB, endB, t);
 
         glClearColor(r, g, b, 1.0f);
 
@@ -430,7 +453,6 @@ public:
         glEnable(GL_LIGHT0);
     }
 };
-
 
 struct Cone {
     float x;
@@ -4680,7 +4702,6 @@ bool checkCollisionWithCoins(Vector& carPosition, std::vector<Coin>& coins, floa
         Vector coinPosition(it->x, it->y, it->z);
         if (carPosition.distanceToNoY(coinPosition) <= collisionThreshold) {
             coins.erase(it); 
-            activateNitro(); 
             return true; // Collision detected
         }
     }
