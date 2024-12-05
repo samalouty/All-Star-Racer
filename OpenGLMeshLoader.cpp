@@ -308,9 +308,18 @@ struct Coin {
     float x;
     float y;
     float z;
+    float animationPhase;
 
-    Coin(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+    Coin(float _x, float _y, float _z, float _animationPhase) : x(_x), y(_y), z(_z), animationPhase(_animationPhase) {}
 };
+
+//struct Coin {
+//    float x;
+//    float y;
+//    float z;
+//
+//    Coin(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+//};
 
 std::vector<Cone> cones = {
     Cone(-1.35632f, 1.3f, 65.1768f),
@@ -357,39 +366,37 @@ std::vector<Vector> barriers = {
 };
 
 std::vector<Coin> coins = {
-    //Coin(7.82275, 1.5, 11.7109),
-    Coin(7.92534, 1.5, 27.4013),
-    Coin(10.554f, 1.5f, 52.6967f),
-   /* Coin(1.85373f, 1.5f, 67.2549f),*/
-    Coin(-10.9683f, 1.5f, 87.0919f),
-    Coin(-22.6874f, 1.5f, 92.2444f),
-    Coin(-34.7078f, 1.5f, 76.8697f),
-    Coin(-57.7044f, 1.5f, 56.5818f),
-    Coin(-68.7227f, 1.5f, 75.522f),
-    Coin(-50.6736f, 1.5f, 96.5191f),
-    Coin(-28.4619f, 1.5f, 146.144f),
-    Coin(-10.6378f, 1.5f, 170.759f),
-    Coin(-17.725f, 1.5f, 204.849f),
-    Coin(-40.5779f, 1.5f, 230.781f),
-    Coin(-82.1536f, 1.5f, 249.69f),
-    Coin(-110.309f, 1.5f, 213.295f),
-    Coin(-161.206f, 1.5f, 173.604f),
-    Coin(-196.742f, 1.5f, 195.568f),
-    Coin(-185.973f, 1.5f, 227.619f),
-    Coin(-167.631f, 1.5f, 260.432f),
-    Coin(-157.681f, 1.5f, 289.419f),
-    Coin(-171.671f, 1.5f, 310.134f),
-    Coin(-175.742f, 1.5f, 327.887f),
-    Coin(-162.257f, 1.5f, 363.324f),
-    Coin(-215.037f, 1.5f, 231.271f),
-    Coin(-227.006f, 1.5f, 264.967f),
-    Coin(-237.439f, 1.5f, 294.338f),
-    Coin(-165.869f, 1.5f, 379.538f),
-    Coin(-181.904f, 1.5f, 398.383f),
-    Coin(-209.562f, 1.5f, 379.815f),
-    Coin(-234.212f, 1.5f, 335.71f),
-    Coin(-216.211f, 1.5f, 326.787f),
-    Coin(-183.778f, 1.5f, 355.048f)
+    Coin(7.92534, 1, 27.4013, 0),
+    Coin(10.554f, 1, 52.6967f, 0),
+    Coin(-10.9683f, 1, 87.0919f, 0),
+    Coin(-22.6874f, 1, 92.2444f, 0),
+    Coin(-34.7078f, 1, 76.8697f, 0),
+    Coin(-57.7044f, 1, 56.5818f, 0),
+    Coin(-68.7227f, 1, 75.522f, 0),
+    Coin(-50.6736f, 1, 96.5191f, 0),
+    Coin(-28.4619f, 1, 146.144f, 0),
+    Coin(-10.6378f, 1, 170.759f, 0),
+    Coin(-17.725f, 1, 204.849f, 0),
+    Coin(-40.5779f, 1, 230.781f, 0),
+    Coin(-82.1536f, 1, 249.69f, 0),
+    Coin(-110.309f, 1, 213.295f, 0),
+    Coin(-161.206f, 1, 173.604f, 0),
+    Coin(-196.742f, 1, 195.568f, 0),
+    Coin(-185.973f, 1, 227.619f, 0),
+    Coin(-167.631f, 1, 260.432f, 0),
+    Coin(-157.681f, 1, 289.419f, 0),
+    Coin(-171.671f, 1, 310.134f, 0),
+    Coin(-175.742f, 1, 327.887f, 0),
+    Coin(-162.257f, 1, 363.324f, 0),
+    Coin(-215.037f, 1, 231.271f, 0),
+    Coin(-227.006f, 1, 264.967f, 0),
+    Coin(-237.439f, 1, 294.338f, 0),
+    Coin(-165.869f, 1, 379.538f, 0),
+    Coin(-181.904f, 1, 398.383f, 0),
+    Coin(-209.562f, 1, 379.815f, 0),
+    Coin(-234.212f, 1, 335.71f, 0),
+    Coin(-216.211f, 1, 326.787f, 0),
+    Coin(-183.778f, 1, 355.048f, 0)
 };    
 
 Vector Eye(20, 5, 20);
@@ -4694,6 +4701,16 @@ void updateNitroAnimation() {
     }
 }
 
+void updateCoinAnimation() {
+    for (auto& coin : coins) {
+        coin.animationPhase += 0.5f;
+        if (coin.animationPhase > 360.0f) {
+            coin.animationPhase -= 360.0f;
+        }
+        coin.y = coin.y + sin(coin.animationPhase) * 0.08f;
+    }
+}
+
 void updateSunPosition(float deltaTime) {
     if (sunsetProgress < 1.0f) {
         sunsetProgress += deltaTime / sunsetDuration;
@@ -5411,9 +5428,12 @@ void renderCones() {
 
 void renderCoins() {
     for (const auto& coin : coins) {
+        float rotation = -coin.animationPhase * 45;
+
         glPushMatrix();
         glTranslatef(coin.x, coin.y, coin.z);
         glRotatef(90, 1, 0, 0);
+        glRotatef(rotation, 0, 0, 1);
         glScalef(0.5, 0.5, 0.5);
         egpModel.DrawModel();
         glPopMatrix();
@@ -5822,7 +5842,7 @@ void myDisplay2(void) {
 
     renderCar2(); 
     renderCoins();
-
+	updateCoinAnimation();
 
     drawHUD();
 
