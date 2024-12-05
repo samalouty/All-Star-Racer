@@ -660,7 +660,7 @@ bool isBraking = false;
 // second car controls 
 float acceleration2 = 9.0f; // Acceleration in units per second^2
 float deceleration2 = 50.0f; // Deceleration in units per second^2
-float turnSpeed2 = 150.0f; // Turn speed in degrees per second
+float turnSpeed2 = 120.0f; // Turn speed in degrees per second
 float maxSpeed2 = 30.0f; // Maximum speed in units per second
 
 float cameraDistance = 8.0f; // Distance behind the car
@@ -4937,7 +4937,7 @@ void updateCarPosition2(float deltaTime) {
             lastCarPosition = carPosition;
         }
     }
-    if (!gameWon && score == 3) {
+    if (!gameWon && score == 27) {
         /*printf("fffffffffffffffff");*/
         gameWon = true;
         playerTime = 90.0f - gameTimer; // Calculate player's time
@@ -5502,6 +5502,25 @@ void drawRoundedRectOutline(float x, float y, float width, float height, float r
     glEnd();
 }
 
+void renderCenteredText(const char* text, float screenWidth, float posY) {
+    // Calculate the width of the text
+    int textWidth = 0;
+    for (const char* c = text; *c != '\0'; c++) {
+        textWidth += glutBitmapWidth(GLUT_BITMAP_HELVETICA_18, *c);
+    }
+
+    // Calculate the X position to center the text
+    float posX = (screenWidth - textWidth) / 2.0f;
+
+    // Set the raster position for the text
+    glRasterPos2f(posX, posY);
+
+    // Render the text
+    for (const char* c = text; *c != '\0'; c++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+    }
+}
+
 void drawHUD() {
 
     if (currentView == CINEMATIC)
@@ -5518,11 +5537,22 @@ void drawHUD() {
         glColor3f(0.0f, 0.0f, 0.0f);  // White color for text
         glRasterPos2i(WIDTH / 2 - 70, HEIGHT - 50);
 
-        const char* text = "Press Enter to Start";
-        for (const char* c = text; *c != '\0'; c++) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+        if (level == 1) {
+            const char* text = "Press Enter to Start";
+            for (const char* c = text; *c != '\0'; c++) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+            }
         }
+		else {
+            const char* text1 = "You need funds for a water bottle and you don't have money, collect 0.5 euros quickly!";
+            const char* text2 = "Press enter to start";
 
+            // Render first line (at the top of the screen)
+            renderCenteredText(text1, WIDTH, HEIGHT - 20);
+
+            // Render second line (below the first line)
+            renderCenteredText(text2, WIDTH, HEIGHT - 60);
+		}
         glMatrixMode(GL_PROJECTION);
         glPopMatrix();
         glMatrixMode(GL_MODELVIEW);
