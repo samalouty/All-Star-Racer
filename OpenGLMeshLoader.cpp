@@ -85,7 +85,6 @@ public:
     }
 
     void UnloadModel() {
-        // Delete OpenGL textures
         for (const auto& entry : textureCache) {
             glDeleteTextures(1, &entry.second);
         }
@@ -2991,6 +2990,14 @@ std::vector<Vertex> trackVertices = {
 
 
 std::vector<Vertex> trackVertices2 = {
+    {-98.9287, 0, 212.075},
+    {-102.207, 0, 213.294},
+    {-231.01, 0, 288.671}, 
+    {-227.259, 0, 313.454},
+    {-200.92, 0, 233.601},
+    {-97.4346, 0, 220.877}, 
+    {-65.4639, 0, 234.629},
+    {-88.3762, 0, 221.856},
     {-220.059, 0, 308.132}, 
     {-84.9432, 0, 230.151}, 
     {-53.0841, 0, -26.9856},
@@ -4904,6 +4911,8 @@ void updateCarPosition2(float deltaTime) {
     if (!collisionDetected) { // Allow movement only if no collision or moving backward
         carPosition.x += sin(radians) * carSpeed * deltaTime;
         carPosition.z += cos(radians) * carSpeed * deltaTime;
+        std::cout << "Car Pos: ";
+        carPosition.print();
     }
     else {
         if (carSpeed < 0) {
@@ -6249,7 +6258,7 @@ void myDisplay2(void) {
 
 
 
-
+boolean secondLevelLoading; 
 
 void myKeyboard(unsigned char button, int x, int y)
 {
@@ -6258,11 +6267,12 @@ void myKeyboard(unsigned char button, int x, int y)
     }
     if(gameOver || gameWon)
         {
-		if (button == 'r' || button == 'R')
+		if ((button == 'r' || button == 'R') && !secondLevelLoading)
 		{
 			resetGame();
 		}
         if (button == 'n' || button == 'N') {
+            secondLevelLoading = true; 
             goToNextLevel(); 
             resetGame();
 
@@ -6372,6 +6382,9 @@ void specialKeyboard(int key, int x, int y)
         wheelRotationX -= 6.0f;
         isAccelerating = false;
         isBraking = true;
+        if (!timerStarted) {
+            timerStarted = true;
+        }
         break;
     }
     glutPostRedisplay();
@@ -6619,7 +6632,6 @@ void LoadAssets2() {
 void goToNextLevel() {
     UnloadAssets();
     LoadAssets2();
-
     timerStarted = false;
     gameTimer = 90.0f;
     playerTime = 0.0f;
@@ -6638,10 +6650,9 @@ void goToNextLevel() {
     score = 0;
     sunEffect.reset();
     sunrise.reset();
-
     level = 2;
     currentView = CINEMATIC;
-
+    secondLevelLoading = false;
     // make my display 2 the current display
     glutDisplayFunc(myDisplay2);
     glutPostRedisplay();
