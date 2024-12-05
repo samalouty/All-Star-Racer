@@ -4815,6 +4815,7 @@ void updateCarPosition(float deltaTime) {
 
 void handleCarControls(float deltaTime) {
     // Accelerate
+
     if (isAccelerating) {
         carSpeed += acceleration * deltaTime;
         if (carSpeed > maxSpeed && !isNitroActive) carSpeed = maxSpeed;
@@ -4936,7 +4937,7 @@ void updateCarPosition2(float deltaTime) {
             lastCarPosition = carPosition;
         }
     }
-    if (!gameWon && score == 27) {
+    if (!gameWon && score == 3) {
         /*printf("fffffffffffffffff");*/
         gameWon = true;
         playerTime = 90.0f - gameTimer; // Calculate player's time
@@ -5594,7 +5595,7 @@ void drawHUD() {
         float scoreX = stopwatchX + 15;
         float scoreY = stopwatchY + stopwatchHeight / 2 - 20;
 
-        std::string scoreText = "Score: " + std::to_string(score);
+        std::string scoreText = "Wallet: " + std::to_string(score) + " EGP";
         glRasterPos2f(scoreX, scoreY);
 
         for (char c : scoreText) {
@@ -5617,23 +5618,48 @@ void drawHUD() {
         glColor3f(0.0f, 1.0f, 0.0f); 
 
         
-        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2);
-        std::string winText = "You Win! Time: " + formattedTime + " seconds";
-        for (char c : winText) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
-        }
 
-        // Second line: "Score: XXXX"
-        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30); 
-        std::string scoreText = "Score: " + std::to_string(scoreTime);
-        for (char c : scoreText) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
-        }
 
-        glRasterPos2i(WIDTH / 2 - 150, HEIGHT / 2 - 60); // Adjust Y-position for the new line
-        std::string instructionText = "Press R to restart or N to go to the next level";
-        for (char c : instructionText) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+        if (level == 1) {
+
+            glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2);
+            std::string winText = "You Win! Time: " + formattedTime + " seconds";
+            for (char c : winText) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+            }
+            // Second line: "Score: XXXX"
+            glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30);
+            std::string scoreText = "Score: " + std::to_string(scoreTime);
+            for (char c : scoreText) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+            }
+        
+            glRasterPos2i(WIDTH / 2 - 150, HEIGHT / 2 - 60); // Adjust Y-position for the new line
+            std::string instructionText = "Press R to restart or N to go to the next level";
+            for (char c : instructionText) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+            }
+        }
+        if (level == 2) {
+
+            glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2);
+            std::string winText = "You Have Completed the Game! Time: " + formattedTime + " seconds";
+            for (char c : winText) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+            }
+
+            glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30);
+            std::string scoreText = "Wallet: " + std::to_string(score) + " EGP";
+            for (char c : scoreText) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+            }
+            
+
+            glRasterPos2i(WIDTH / 2 - 150, HEIGHT / 2 - 60); // Adjust Y-position for the new line
+            std::string instructionText = "Press R to restart";
+            for (char c : instructionText) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+            }
         }
     }
 
@@ -5670,6 +5696,7 @@ void resetGame() {
     playerTime = 0.0f;
     nitros = originalNitros;
 	coins = originalCoins;
+    score = 0; 
     sunEffect.reset();
     sunrise.reset();
 }
