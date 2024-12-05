@@ -268,9 +268,9 @@ GLTFModel trafficObstacle;
 GLTFModel moscowModel; 
 GLTFModel bugattiModel;
 GLTFModel blueWheelModel;
-
-
-
+GLTFModel egpModel;
+GLTFModel rock1Model;
+GLTFModel rock2Model;
 
 
 
@@ -302,6 +302,14 @@ struct Nitro {
     float animationPhase;
 
     Nitro(float _x, float _y, float _z, float _animationPhase) : x(_x), y(_y), z(_z), animationPhase(_animationPhase) {}
+};
+
+struct Coin {
+    float x;
+    float y;
+    float z;
+
+    Coin(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 };
 
 std::vector<Cone> cones = {
@@ -347,6 +355,42 @@ std::vector<Vector> barriers = {
     Vector(181.899, 0, 226.466),
     Vector(181.899, 0, 231.466)
 };
+
+std::vector<Coin> coins = {
+    //Coin(7.82275, 1.5, 11.7109),
+    Coin(7.92534, 1.5, 27.4013),
+    Coin(10.554f, 1.5f, 52.6967f),
+   /* Coin(1.85373f, 1.5f, 67.2549f),*/
+    Coin(-10.9683f, 1.5f, 87.0919f),
+    Coin(-22.6874f, 1.5f, 92.2444f),
+    Coin(-34.7078f, 1.5f, 76.8697f),
+    Coin(-57.7044f, 1.5f, 56.5818f),
+    Coin(-68.7227f, 1.5f, 75.522f),
+    Coin(-50.6736f, 1.5f, 96.5191f),
+    Coin(-28.4619f, 1.5f, 146.144f),
+    Coin(-10.6378f, 1.5f, 170.759f),
+    Coin(-17.725f, 1.5f, 204.849f),
+    Coin(-40.5779f, 1.5f, 230.781f),
+    Coin(-82.1536f, 1.5f, 249.69f),
+    Coin(-110.309f, 1.5f, 213.295f),
+    Coin(-161.206f, 1.5f, 173.604f),
+    Coin(-196.742f, 1.5f, 195.568f),
+    Coin(-185.973f, 1.5f, 227.619f),
+    Coin(-167.631f, 1.5f, 260.432f),
+    Coin(-157.681f, 1.5f, 289.419f),
+    Coin(-171.671f, 1.5f, 310.134f),
+    Coin(-175.742f, 1.5f, 327.887f),
+    Coin(-162.257f, 1.5f, 363.324f),
+    Coin(-215.037f, 1.5f, 231.271f),
+    Coin(-227.006f, 1.5f, 264.967f),
+    Coin(-237.439f, 1.5f, 294.338f),
+    Coin(-165.869f, 1.5f, 379.538f),
+    Coin(-181.904f, 1.5f, 398.383f),
+    Coin(-209.562f, 1.5f, 379.815f),
+    Coin(-234.212f, 1.5f, 335.71f),
+    Coin(-216.211f, 1.5f, 326.787f),
+    Coin(-183.778f, 1.5f, 355.048f)
+};    
 
 Vector Eye(20, 5, 20);
 Vector At(0, 0, 0);
@@ -437,7 +481,7 @@ GLfloat headlight_dir[] = { 0.0f, 0.0f, -1.0f };        // Direction of headligh
 bool gameOver = false;
 Vector lastCarPosition(0, 0, 0);
 bool gameWon = false;
-float gameTimer = 90.0f; // 90 seconds timer
+float gameTimer = 5000.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
 
@@ -5387,6 +5431,17 @@ void renderCones() {
     }
 }
 
+void renderCoins() {
+    for (const auto& coin : coins) {
+        glPushMatrix();
+        glTranslatef(coin.x, coin.y, coin.z);
+        glRotatef(90, 1, 0, 0);
+        glScalef(0.5, 0.5, 0.5);
+        egpModel.DrawModel();
+        glPopMatrix();
+    }
+}
+
 void renderText(float x, float y, const std::string& text) {
     glRasterPos2f(x, y);
     for (char c : text) {
@@ -5788,6 +5843,8 @@ void myDisplay2(void) {
 
 
     renderCar2(); 
+    renderCoins();
+
 
     drawHUD();
 
@@ -6101,6 +6158,18 @@ void LoadAssets2() {
     
 
     if (!bugattiModel.LoadModel("models/bugatti-no-wheels/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+
+    if (!egpModel.LoadModel("models/pound_egypt/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+
+    if (!rock1Model.LoadModel("models/snowrock/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+
+    if (!rock2Model.LoadModel("models/snowrock2/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
