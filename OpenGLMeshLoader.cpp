@@ -4863,7 +4863,7 @@ bool checkCollisionWithObstacles(const Vector& carPosition, float collisionThres
     return false; // No collision
 }
 
-bool checkCollisionWithObstacles2(const Vector& carPosition, float collisionThreshold = 2000.0f) {
+bool checkCollisionWithObstacles2(const Vector& carPosition, float collisionThreshold = 2.0f) {
     for (const auto& stone : stones) {
         Vector stonePosition(stone.x, stone.y, stone.z);
         if (carPosition.distanceToNoY(stonePosition) <= collisionThreshold) {
@@ -5999,7 +5999,7 @@ void renderStones() {
     for (const auto& stone : stones) {
         glPushMatrix();
         glTranslatef(stone.x, stone.y, stone.z);
-        glScalef(0.02f, 0.02f, 0.02f);  // Adjust scale if needed
+        glScalef(1.0f, 1.0f, 1.0f);  // Adjust scale if needed
         glRotatef(180.0f, 1, 0, 0);   // Adjust rotation if needed
         rockModel.DrawModel();
         glPopMatrix();
@@ -6012,7 +6012,7 @@ void renderLogs() {
         glTranslatef(log.x, log.y, log.z);
         glScalef(3.0f, 3.0f, 3.0f);  // Adjust scale if needed
         glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
-        logModel.DrawModel();
+        //logModel.DrawModel();
         glPopMatrix();
     }
 }
@@ -6476,7 +6476,7 @@ void myDisplay2(void) {
         renderStones();
         updateCoinAnimation();
 
-        if (checkCollisionWithObstacles(carPosition)) {
+        if (checkCollisionWithObstacles2(carPosition)) {
             carSpeed = 0;
             isColliding = true;
             applyCollisionRecoil(deltaTime);
@@ -6871,11 +6871,11 @@ void LoadAssets2() {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
-    if (!logModel.LoadModel("models/log/scene.gltf")) {
-        std::cerr << "Failed to load GLTF model" << std::endl;
-    }
+    //if (!logModel.LoadModel("models/log/scene.gltf")) {
+    //    std::cerr << "Failed to load GLTF model" << std::endl;
+    //}
 
-    if (!rockModel.LoadModel("models/rock-final/scene.gltf")) {
+    if (!rockModel.LoadModel("models/rock/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
     if (!roadBlockModel.LoadModel("models/roadsign/scene.gltf")) {
