@@ -1024,7 +1024,7 @@ void renderCarSelectScreen() {
     }
 
     glColor3f(1.0f, 1.0f, 1.0f);
-    std::string instructions = "Click on a car to select it. Press Enter to start the game.";
+    std::string instructions = "Click on a car to select it. Press 'S' to start the game.";
     int instructionsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)instructions.c_str());
     glRasterPos2i((WIDTH - instructionsWidth) / 2, HEIGHT - 50);
     for (char c : instructions) {
@@ -5210,7 +5210,7 @@ void updateCoinAnimation() {
 }
 
 void updateSunPosition(float deltaTime) {
-    if (sunsetProgress < 1.0f) {
+    if (sunsetProgress < 1.0f && !selectingCar) {
         sunsetProgress += deltaTime / sunsetDuration;
         if (sunsetProgress > 1.0f) {
             sunsetProgress = 1.0f; // Clamp to 1.0 to stop the sunset
@@ -6621,6 +6621,7 @@ void myKeyboard(unsigned char button, int x, int y)
 	//	break;
     case 13:
     // Enter key
+        if(!selectingCar)
 		endCinematicMode();
 		break;
 	case 27:
