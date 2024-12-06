@@ -572,7 +572,7 @@ std::vector<Log> logs = {
 };
 
 std::vector<Vector> barriers2 = {
-    Vector(-27.0392, 0, -23.2698),
+    Vector(-47.0496, 0, -26.7259),
     Vector(-160.909, 0, 386.673),
     Vector(-160.909, 0, 378.713)
 };
@@ -5145,6 +5145,8 @@ void updateCarPosition2(float deltaTime) {
 
         // Ensure the car stops moving forward
         carSpeed = std::min(carSpeed, 0.0f);
+        if(score != 0)
+        score = score - 1;
     }
 
     wheelRotationX += carSpeed * 360.0f * deltaTime;
@@ -6462,7 +6464,7 @@ void myDisplay2(void) {
         glPopMatrix();
 
          glPushMatrix();
-         glTranslatef(-27.0392, 0, -23.2698);
+         glTranslatef(-47.0496, 0, -26.7259);
          glRotatef(90, 0, 1, 0);
          glScalef(7, 7, 7);
          roadBlockModel.DrawModel();
@@ -6492,6 +6494,8 @@ void myDisplay2(void) {
             carSpeed = 0;
             isColliding = true;
             applyCollisionRecoil(deltaTime);
+            if (score != 0)
+                score -= 1;
         }
 
         if (checkCollisionWithCoins(carPosition, coins))
