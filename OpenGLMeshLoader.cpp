@@ -688,7 +688,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 2; 
+int level = 1; 
 boolean selectingCar = true;
 int selectedCar = 0; 
 
@@ -5308,7 +5308,7 @@ const float CINEMATIC_DURATION = 7.0f;
 void updateCamera()
 {
 
-    if (currentView == CINEMATIC) {
+    if (currentView == CINEMATIC & !selectingCar) {
         // Check if we're at the final point
         if (level == 1) {
             if (currentCinematicPoint == cinematicPoints.size() - 1) {
@@ -6532,12 +6532,14 @@ boolean secondLevelLoading;
 
 void myKeyboard(unsigned char button, int x, int y)
 {
-    if (selectingCar && button == 13 && selectedCar != 0) {  // 13 is the ASCII code for Enter
+    if (selectingCar && button == 's' && selectedCar != 0) {  // 13 is the ASCII code for Enter
         selectingCar = false;
         std::cout << "Selected car: " << selectedCar << std::endl;
         // Initialize game with selected car
         // You might want to call a function here to set up the game based on the selected car
-        glutPostRedisplay();
+        //glutPostRedisplay();
+        // wait for assets to be loaded 
+        myInit();
     }
 
     if (isRespawning || collisionRecoil > 0) {
@@ -6966,6 +6968,7 @@ void LoadAssets2() {
 void goToNextLevel() {
     UnloadAssets();
     LoadAssets2();
+    selectedCar = 0; 
     selectingCar = true;
     timerStarted = false;
     gameTimer = 90.0f;
@@ -6986,6 +6989,8 @@ void goToNextLevel() {
     sunEffect.reset();
     sunrise.reset();
     level = 2;
+    currentCinematicPoint = 0;
+    cinematicTimer = 0;
     currentView = CINEMATIC;
     secondLevelLoading = false;
     // make my display 2 the current display
