@@ -1093,19 +1093,20 @@ void renderCarSelectScreen() {
 
         // Draw car name
         glColor3f(1.0f, 1.0f, 1.0f);
-        int nameWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_12, (const unsigned char*)cars[i].name.c_str());
+        int nameWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)cars[i].name.c_str());
         glRasterPos2i(x + (carWidth - nameWidth) / 2, y + carHeight + 20);
         for (char c : cars[i].name) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
         }
 
         // Draw car stats
         std::string stats = cars[i].drivetrain + " | " + std::to_string(cars[i].weight) + "kg | " + std::to_string(cars[i].horsepower) + "hp | " + std::to_string(cars[i].performancePoints) + "PP";
-        int statsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_12, (const unsigned char*)stats.c_str());
+        int statsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)stats.c_str());
         glRasterPos2i(x + (carWidth - statsWidth) / 2, y + carHeight + 40);
         for (char c : stats) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
         }
+
 
         // Draw selection box
         if (i == selectedCarIndex || i == hoverCarIndex) {
