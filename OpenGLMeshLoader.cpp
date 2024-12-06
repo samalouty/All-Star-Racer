@@ -871,6 +871,7 @@ void stopIdleEngine() {
     errorCode = mciSendStringA("close idleEngine", NULL, 0, NULL);
     checkMciError(errorCode, "Closing idle engine");
 }
+
 void playCoinSound() {
 	PlaySound(TEXT("./P11_55_0990_coin.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
@@ -882,7 +883,6 @@ void playNitroSound() {
 void playConeCrashSound() {
 	PlaySound(TEXT("sounds/coneCrash.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
-
 
 void playLoseSound() {
 	PlaySound(TEXT("./P11_55_0990_lose.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
@@ -5488,6 +5488,8 @@ void updateCamera()
         }
         else {
             if (currentCinematicPoint == cinematicPoints2.size() - 1) {
+                sunEffect.reset();
+                sunrise.reset();
                 float t = cinematicTimer / FINAL_POINT_DURATION;
                 Vector current = cinematicPoints2[currentCinematicPoint];
 
@@ -6765,8 +6767,12 @@ void myKeyboard(unsigned char button, int x, int y)
 	//	break;
     case 13:
     // Enter key
-        if(!selectingCar)
-		endCinematicMode();
+        if (!selectingCar) {
+            endCinematicMode();
+            sunEffect.reset();
+            sunrise.reset();
+        }
+        sunsetProgress = 0.0f;
 		break;
 	case 27:
 		exit(0);
