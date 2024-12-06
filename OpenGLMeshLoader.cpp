@@ -15,6 +15,10 @@
 #include <glm/gtc/type_ptr.hpp>
 #include <unordered_map>
 #include <string>
+#include <Windows.h>
+#include <iostream>
+#include <mmsystem.h>
+#pragma comment(lib, "winmm.lib")
 
 #define M_PI 3.14159265358979323846
 void goToNextLevel(); 
@@ -747,6 +751,99 @@ float lastSpeed = 0.0f;
 int score = 0;
 SunriseEffect sunrise(120.0f);
 MovingSunEffect sunEffect(120.0f);
+
+//=======================================================================
+// Sound
+//=======================================================================
+void playBackgroundMusic() {
+    const std::string& filename = "./P11_55_0990_CrowdCheering.wav";
+    std::string openCommand = "open \"" + filename + "\" type waveaudio alias backgroundMusic";
+    mciSendStringA(openCommand.c_str(), NULL, 0, NULL);
+    mciSendStringA("play backgroundMusic", NULL, 0, NULL);
+}
+
+void stopBackgroundMusic() {
+    mciSendStringA("stop backgroundMusic", NULL, 0, NULL);
+    mciSendStringA("close backgroundMusic", NULL, 0, NULL);
+}
+
+void playCinematic1Music() {
+    const std::string& filename = "sounds/cinematic1.wav";
+    std::string openCommand = "open \"" + filename + "\" type waveaudio alias cinematic1Music";
+    mciSendStringA(openCommand.c_str(), NULL, 0, NULL);
+    mciSendStringA("play cinematic1Music", NULL, 0, NULL);
+}
+
+void stopCinamtic1Music() {
+    mciSendStringA("stop cinematic1Music", NULL, 0, NULL);
+    mciSendStringA("close cinematic1Music", NULL, 0, NULL);
+}
+
+void playWinMusic() {
+    const std::string& filename = "sounds/gameWin.wav";
+    std::string openCommand = "open \"" + filename + "\" type waveaudio alias winMusic";
+    mciSendStringA(openCommand.c_str(), NULL, 0, NULL);
+    mciSendStringA("play winMusic", NULL, 0, NULL);
+    std::string volumeCommand = "setaudio winMusic volume to 100";
+    mciSendStringA(volumeCommand.c_str(), NULL, 0, NULL);
+}
+
+void stopWinMusic() {
+	mciSendStringA("stop winMusic", NULL, 0, NULL);
+	mciSendStringA("close winMusic", NULL, 0, NULL);
+}
+
+void checkMciError(MCIERROR errorCode, const std::string& context) {
+    if (errorCode != 0) {
+        char errorMessage[256];
+        mciGetErrorStringA(errorCode, errorMessage, sizeof(errorMessage));
+        std::cerr << "Error in " << context << ": " << errorMessage << std::endl;
+    }
+}
+
+void playIdleEngine() {
+    const std::string& filename = "sounds/idle.wav";
+    std::string openCommand = "open \"" + filename + "\" type mpegvideo alias idleEngine";
+
+    // Execute the open command and check for errors
+    MCIERROR errorCode = mciSendStringA(openCommand.c_str(), NULL, 0, NULL);
+    checkMciError(errorCode, "Opening idle engine");
+
+    std::string volumeCommand = "setaudio idleEngine volume to 500";
+    errorCode = mciSendStringA(volumeCommand.c_str(), NULL, 0, NULL);
+    checkMciError(errorCode, "Playing idle engine");
+
+    // Execute the play command and check for errors
+    errorCode = mciSendStringA("play idleEngine repeat", NULL, 0, NULL);
+    checkMciError(errorCode, "Playing idle engine");
+}
+
+void stopIdleEngine() {
+    // Execute the stop command and check for errors
+    MCIERROR errorCode = mciSendStringA("stop idleEngine", NULL, 0, NULL);
+    checkMciError(errorCode, "Stopping idle engine");
+
+    // Execute the close command and check for errors
+    errorCode = mciSendStringA("close idleEngine", NULL, 0, NULL);
+    checkMciError(errorCode, "Closing idle engine");
+}
+void playCoinSound() {
+	PlaySound(TEXT("./P11_55_0990_coin.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+}
+
+void playNitroSound() {
+	PlaySound(TEXT("sounds/nitro.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+}
+
+void playConeCrashSound() {
+	PlaySound(TEXT("sounds/coneCrash.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+}
+
+
+void playLoseSound() {
+	PlaySound(TEXT("./P11_55_0990_lose.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+}
+
 
 
 // Function to set up the headlights
@@ -4813,11 +4910,17 @@ bool checkCollisionWithObstacles(const Vector& carPosition, float collisionThres
     for (const auto& cone : cones) {
         Vector conePosition(cone.x, cone.y, cone.z);
         if (carPosition.distanceToNoY(conePosition) <= collisionThreshold) {
+            if (!gameWon) {
+                playConeCrashSound();
+            }
             return true; // Collision detected
         }
     }
     for (const auto& barrier : barriers) {
         if (carPosition.distanceToNoY(barrier) <= 4) {
+            if (!gameWon) {
+                playConeCrashSound();
+            }
             return true; 
         }
     }
@@ -4839,6 +4942,7 @@ bool checkCollisionWithNitros(Vector& carPosition, std::vector<Nitro>& nitros, f
         if (carPosition.distanceToNoY(nitroPosition) <= collisionThreshold) {
             nitros.erase(it); // Remove the Nitro from the array
             activateNitro(); // Activate nitro boost
+            playNitroSound();
             return true; // Collision detected
         }
     }
@@ -4948,6 +5052,8 @@ void updateCarPosition(float deltaTime) {
 
     if (!gameWon && hasPassedFinishLine()) {
         gameWon = true;
+        playWinMusic();
+        stopIdleEngine();
         playerTime = 90.0f - gameTimer; // Calculate player's time
     }
 
