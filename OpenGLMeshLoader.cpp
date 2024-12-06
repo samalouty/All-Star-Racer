@@ -24,6 +24,10 @@
 void goToNextLevel(); 
 
 
+int level = 1;
+boolean selectingCar = true;
+int selectedCar = 0;
+
 GLuint shaderProgram;
 
 
@@ -337,7 +341,9 @@ public:
 	}
 
     void update(float deltaTime) {
-        time += deltaTime;
+        if (level == 2 && !selectingCar) {
+            time += deltaTime;
+        }
         if (time > duration) {
             time = duration; // Cap at maximum duration
         }
@@ -427,7 +433,9 @@ public:
     }
 
     void update(float deltaTime) {
-        time += deltaTime;
+        if(level == 2 && !selectingCar) {
+			time += deltaTime;
+		}
         if (time > duration) {
             time = duration; // Cap at maximum duration
         }
@@ -692,9 +700,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 1; 
-boolean selectingCar = true;
-int selectedCar = 0; 
+
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -5436,8 +5442,11 @@ const float CINEMATIC_DURATION = 7.0f;
 void updateCamera()
 {
 
-    if (currentView == CINEMATIC & !selectingCar) {
+    if (currentView == CINEMATIC && !selectingCar) {
         // Check if we're at the final point
+        sunEffect.reset();
+        sunrise.reset();
+
         if (level == 1) {
             if (currentCinematicPoint == cinematicPoints.size() - 1) {
                 float t = cinematicTimer / FINAL_POINT_DURATION;
@@ -6686,7 +6695,12 @@ void myKeyboard(unsigned char button, int x, int y)
         // You might want to call a function here to set up the game based on the selected car
         //glutPostRedisplay();
         // wait for assets to be loaded 
+
+        
         myInit();
+        sunrise.reset();
+        sunEffect.reset();
+
     }
 
     if (isRespawning || collisionRecoil > 0) {
@@ -7143,12 +7157,12 @@ void goToNextLevel() {
     level = 2;
     currentCinematicPoint = 0;
     cinematicTimer = 0;
-    currentView = CINEMATIC;
-    secondLevelLoading = false;
+
     // make my display 2 the current display
     glutDisplayFunc(myDisplay2);
-    sunEffect.start();
-    sunrise.start();
+    currentView = CINEMATIC;
+    secondLevelLoading = false;
+
     glutPostRedisplay();
 
 }
