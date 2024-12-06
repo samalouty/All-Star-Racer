@@ -734,7 +734,7 @@ float acceleration = 9.0f; // Acceleration in units per second^2
 float turnSpeed = 90.0f; // Turn speed in degrees per second
 bool isAccelerating = false;
 bool isBraking = false;
-
+bool menuMusicStarted = false;
 // second car controls 
 float acceleration2 = 9.0f; // Acceleration in units per second^2
 float deceleration2 = 50.0f; // Deceleration in units per second^2
@@ -799,17 +799,6 @@ MovingSunEffect sunEffect(120.0f);
 //=======================================================================
 // Sound
 //=======================================================================
-void playBackgroundMusic() {
-    const std::string& filename = "./P11_55_0990_CrowdCheering.wav";
-    std::string openCommand = "open \"" + filename + "\" type waveaudio alias backgroundMusic";
-    mciSendStringA(openCommand.c_str(), NULL, 0, NULL);
-    mciSendStringA("play backgroundMusic", NULL, 0, NULL);
-}
-
-void stopBackgroundMusic() {
-    mciSendStringA("stop backgroundMusic", NULL, 0, NULL);
-    mciSendStringA("close backgroundMusic", NULL, 0, NULL);
-}
 
 void playCinematic1Music() {
     const std::string& filename = "sounds/cinematic1.wav";
@@ -818,9 +807,33 @@ void playCinematic1Music() {
     mciSendStringA("play cinematic1Music", NULL, 0, NULL);
 }
 
-void stopCinamtic1Music() {
+void stopCinemtic1Music() {
     mciSendStringA("stop cinematic1Music", NULL, 0, NULL);
     mciSendStringA("close cinematic1Music", NULL, 0, NULL);
+}
+
+void playCinematic2Music() {
+    const std::string& filename = "sounds/cinematic2.wav";
+    std::string openCommand = "open \"" + filename + "\" type waveaudio alias cinematic2Music";
+    mciSendStringA(openCommand.c_str(), NULL, 0, NULL);
+    mciSendStringA("play cinematic2Music", NULL, 0, NULL);
+}
+
+void stopCinemtic2Music() {
+    mciSendStringA("stop cinematic2Music", NULL, 0, NULL);
+    mciSendStringA("close cinematic2Music", NULL, 0, NULL);
+}
+
+void playMenuMusic() {
+    const std::string& filename = "sounds/menu.wav";
+    std::string openCommand = "open \"" + filename + "\" type mpegvideo alias menuMusic";
+    mciSendStringA(openCommand.c_str(), NULL, 0, NULL);
+    mciSendStringA("play menuMusic repeat", NULL, 0, NULL);
+}
+
+void stopMenuMusic() {
+    mciSendStringA("stop menuMusic", NULL, 0, NULL);
+    mciSendStringA("close menuMusic", NULL, 0, NULL);
 }
 
 void playWinMusic() {
@@ -846,7 +859,7 @@ void checkMciError(MCIERROR errorCode, const std::string& context) {
 }
 
 void playIdleEngine() {
-    const std::string& filename = "sounds/idle.wav";
+    const std::string& filename = "sounds/idle_car_engine.wav";
     std::string openCommand = "open \"" + filename + "\" type mpegvideo alias idleEngine";
 
     // Execute the open command and check for errors
@@ -872,7 +885,11 @@ void stopIdleEngine() {
     checkMciError(errorCode, "Closing idle engine");
 }
 void playCoinSound() {
-	PlaySound(TEXT("./P11_55_0990_coin.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+	PlaySound(TEXT("sounds/coin.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+}
+
+void playCoinDrop() {
+    PlaySound(TEXT("sounds/coinDrop.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
 
 void playNitroSound() {
@@ -885,7 +902,7 @@ void playConeCrashSound() {
 
 
 void playLoseSound() {
-	PlaySound(TEXT("./P11_55_0990_lose.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
+	PlaySound(TEXT("sounds/wasted.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
 
 
@@ -4975,6 +4992,7 @@ bool checkCollisionWithObstacles2(const Vector& carPosition, float collisionThre
     for (const auto& stone : stones) {
         Vector stonePosition(stone.x, stone.y, stone.z);
         if (carPosition.distanceToNoY(stonePosition) <= collisionThreshold) {
+            playCoinDrop();
             return true; // Collision detected
         }
     }
@@ -4984,6 +5002,7 @@ bool checkCollisionWithObstacles2(const Vector& carPosition, float collisionThre
 bool checkCollisionWithBarriers2(const Vector& carPosition, float collisionThreshold = 2.0f) {
     for (const auto& barrier : barriers2) {
         if (carPosition.distanceToNoY(barrier) <= 4) {
+			playCoinDrop();
             return true;
         }
     }
@@ -5016,6 +5035,7 @@ bool checkCollisionWithCoins(Vector& carPosition, std::vector<Coin>& coins, floa
     for (auto it = coins.begin(); it != coins.end(); ++it) {
         Vector coinPosition(it->x, it->y, it->z);
         if (carPosition.distanceToNoY(coinPosition) <= collisionThreshold) {
+            playCoinSound();
             coins.erase(it); 
             return true; // Collision detected
         }
@@ -5119,6 +5139,8 @@ void updateCarPosition(float deltaTime) {
         //carPosition.print();
     }
     else {
+        if(!gravityEnabled)
+            playLoseSound();
         gravityEnabled = true;
     }
 
@@ -5400,12 +5422,15 @@ void endCinematicMode()
 {
     if (currentView == CINEMATIC)
     {
+		stopCinemtic1Music();
+        stopCinemtic2Music();
         currentView = THIRD_PERSON;
         // Reset car position and other game start parameters if needed
         carPosition = Vector(0, 0, 0);
         carRotation = 0;
         carSpeed = 0;
         // Add any other necessary game start initializations here
+        playIdleEngine();
     }
 }
 
@@ -5435,7 +5460,7 @@ const float CINEMATIC_DURATION = 7.0f;
 void updateCamera()
 {
 
-    if (currentView == CINEMATIC & !selectingCar) {
+    if (currentView == CINEMATIC && !selectingCar) {
         // Check if we're at the final point
         if (level == 1) {
             if (currentCinematicPoint == cinematicPoints.size() - 1) {
@@ -6096,6 +6121,7 @@ void resetGame() {
 	carTooDamaged = false;
     sunEffect.reset();
     sunrise.reset();
+	stopWinMusic();
 }
 
 //=======================================================================
@@ -6575,7 +6601,10 @@ void myDisplay(void)
     else {
 
         renderCarSelectScreen();
-
+        if (!menuMusicStarted) {
+            menuMusicStarted = true;
+			playMenuMusic();
+        }
     }
 
     glutSwapBuffers();
@@ -6659,6 +6688,10 @@ void myDisplay2(void) {
     }
     else {
 		renderCarSelectScreen();
+        if (!menuMusicStarted) {
+            menuMusicStarted = true;
+            playMenuMusic();
+        }
 	}
 
     glutSwapBuffers();
@@ -6683,7 +6716,12 @@ void myKeyboard(unsigned char button, int x, int y)
         // You might want to call a function here to set up the game based on the selected car
         //glutPostRedisplay();
         // wait for assets to be loaded 
+        stopMenuMusic();
         myInit();
+        if (level == 1)
+            playCinematic1Music();
+        else
+            playCinematic2Music();
     }
 
     if (isRespawning || collisionRecoil > 0) {
@@ -6694,12 +6732,12 @@ void myKeyboard(unsigned char button, int x, int y)
 		if ((button == 'r' || button == 'R') && !secondLevelLoading)
 		{
 			resetGame();
+            playIdleEngine();
 		}
         if (button == 'n' || button == 'N') {
             secondLevelLoading = true; 
             goToNextLevel(); 
             resetGame();
-
         }
 		return;
 	}
@@ -7138,6 +7176,7 @@ void goToNextLevel() {
     cinematicTimer = 0;
     currentView = CINEMATIC;
     secondLevelLoading = false;
+	menuMusicStarted = false;
     // make my display 2 the current display
     glutDisplayFunc(myDisplay2);
     sunEffect.start();
