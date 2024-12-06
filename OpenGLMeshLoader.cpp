@@ -276,8 +276,9 @@ GLTFModel moscowModel;
 GLTFModel bugattiModel;
 GLTFModel blueWheelModel;
 GLTFModel egpModel;
-GLTFModel rock1Model;
-GLTFModel rock2Model;
+GLTFModel rockModel;
+GLTFModel logModel;
+GLTFModel roadBlockModel;
 
 
 
@@ -492,6 +493,22 @@ struct Cone {
     Cone(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 };
 
+struct Stone {
+    float x;
+    float y;
+    float z;
+
+    Stone(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+};
+
+struct Log {
+    float x;
+    float y;
+    float z;
+
+    Log(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+};
+
 struct Nitro {
     float x;
     float y;
@@ -536,6 +553,22 @@ std::vector<Cone> cones = {
     Cone(-152.706f, 1.3f, -55.6917f),
     Cone(-264.162f, 1.3f, 45.1598f),
     //Cone(-396.0f, 1.3f, 45.1598f) // Assuming the last value was cut off, added a placeholder value
+};
+
+std::vector<Stone> stones = {
+    Stone(-0.949136, 1, 62.6161),
+    Stone(-55.3627, 1, 99.5125),
+    Stone(-34.5801, 1, 215.34),
+    Stone(-88.8641, 1, 243.28),
+    Stone(-192.955, 1, 231.441),
+    Stone(-200.625, 1, 381.979),
+    Stone(-247.875, 1, 330.386),
+    Stone(-237.087, 1, 301.843)
+};
+
+std::vector<Log> logs = {
+    Log(-160.909, 0, 386.673),
+    Log(-160.909, 0, 378.713)
 };
 
 std::vector<Nitro> nitros = {
@@ -646,7 +679,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 1; 
+int level = 2; 
 boolean selectingCar = true;
 int selectedCar = 0; 
 
@@ -726,7 +759,7 @@ GLfloat headlight_dir[] = { 0.0f, 0.0f, -1.0f };        // Direction of headligh
 bool gameOver = false;
 Vector lastCarPosition(0, 0, 0);
 bool gameWon = false;
-float gameTimer = 90.0f; // 90 seconds timer
+float gameTimer = 890.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
 
@@ -4824,6 +4857,22 @@ bool checkCollisionWithObstacles(const Vector& carPosition, float collisionThres
     return false; // No collision
 }
 
+bool checkCollisionWithObstacles2(const Vector& carPosition, float collisionThreshold = 2000.0f) {
+    for (const auto& stone : stones) {
+        Vector stonePosition(stone.x, stone.y, stone.z);
+        if (carPosition.distanceToNoY(stonePosition) <= collisionThreshold) {
+            return true; // Collision detected
+        }
+    }
+    for (const auto& log : logs) {
+        Vector logPosition(log.x, log.y, log.z);
+        if (carPosition.distanceToNoY(logPosition) <= 800) {
+            return true;
+        }
+    }
+    return false; // No collision
+}
+
 void activateNitro() {
     if (!isNitroActive) {
         isNitroActive = true;
@@ -4871,8 +4920,8 @@ void updateCollisionRecoil(float deltaTime) {
     if (collisionRecoil <= 0) {
         collisionRecoil = 0.0f;
          isColliding = false;
-         startRespawn();
     }
+    isColliding = false;
 }
 
 void applyCollisionRecoil(float deltaTime) {
@@ -5937,6 +5986,28 @@ void renderCones() {
     }
 }
 
+void renderStones() {
+    for (const auto& stone : stones) {
+        glPushMatrix();
+        glTranslatef(stone.x, stone.y, stone.z);
+        glScalef(0.02f, 0.02f, 0.02f);  // Adjust scale if needed
+        glRotatef(180.0f, 1, 0, 0);   // Adjust rotation if needed
+        rockModel.DrawModel();
+        glPopMatrix();
+    }
+}
+
+void renderLogs() {
+    for (const auto& log : logs) {
+        glPushMatrix();
+        glTranslatef(log.x, log.y, log.z);
+        glScalef(3.0f, 3.0f, 3.0f);  // Adjust scale if needed
+        glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
+        logModel.DrawModel();
+        glPopMatrix();
+    }
+}
+
 void renderCoins() {
     for (const auto& coin : coins) {
         float rotation = -coin.animationPhase * 45;
@@ -6369,12 +6440,12 @@ void myDisplay2(void) {
         moscowModel.DrawModel();
         glPopMatrix();
 
-        /* glPushMatrix();
-         glTranslatef(1, 1, 2);
-         glRotatef(150, 1, 0, 0);
-         glScalef(1, 1, 1);
-         rock1Model.DrawModel();
-         glPopMatrix();*/
+         glPushMatrix();
+         glTranslatef(-27.0392, 0, -23.2698);
+         glRotatef(90, 0, 1, 0);
+         glScalef(7, 7, 7);
+         roadBlockModel.DrawModel();
+         glPopMatrix();
 
          /*glPushMatrix();
          glTranslatef(5, 1, 1);
@@ -6392,7 +6463,15 @@ void myDisplay2(void) {
 
         renderCoins();
         renderStreetlights();
+        renderLogs();
+        renderStones();
         updateCoinAnimation();
+
+        if (checkCollisionWithObstacles(carPosition)) {
+            carSpeed = 0;
+            isColliding = true;
+            applyCollisionRecoil(deltaTime);
+        }
 
         if (checkCollisionWithCoins(carPosition, coins))
         {
@@ -6783,11 +6862,14 @@ void LoadAssets2() {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
-    if (!rock1Model.LoadModel("models/snowrock/scene.gltf")) {
+    if (!logModel.LoadModel("models/log/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
-    if (!rock2Model.LoadModel("models/snowrock2/scene.gltf")) {
+    if (!rockModel.LoadModel("models/rock-final/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+    if (!roadBlockModel.LoadModel("models/roadsign/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
@@ -6874,6 +6956,8 @@ void goToNextLevel() {
     secondLevelLoading = false;
     // make my display 2 the current display
     glutDisplayFunc(myDisplay2);
+    sunEffect.start();
+    sunrise.start();
     glutPostRedisplay();
 
 }
