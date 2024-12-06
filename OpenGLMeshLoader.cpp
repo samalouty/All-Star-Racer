@@ -24,7 +24,7 @@
 void goToNextLevel(); 
 
 
-int level = 2;
+int level = 1;
 boolean selectingCar = true;
 int selectedCar = 0;
 
@@ -5146,8 +5146,10 @@ void updateCarPosition(float deltaTime) {
         //carPosition.print();
     }
     else {
-        if(!gravityEnabled)
-            playLoseSound();
+        if (!gravityEnabled) {
+           playLoseSound();
+		   stopIdleEngine();
+        }
         gravityEnabled = true;
     }
 
@@ -5321,6 +5323,8 @@ void updateCarPosition2(float deltaTime) {
     }
     if (!gameWon && score == 27) {
         /*printf("fffffffffffffffff");*/
+        playWinMusic();
+        stopIdleEngine();
         gameWon = true;
         playerTime = 90.0f - gameTimer; // Calculate player's time
     }
@@ -5517,6 +5521,8 @@ void updateCamera()
 
                 // If cinematic is complete, switch to third person view
                 if (currentCinematicPoint == 0 && cinematicTimer == 0) {
+					stopCinemtic1Music();
+                    playIdleEngine();
                     currentView = THIRD_PERSON;
                 }
             }
@@ -5568,6 +5574,8 @@ void updateCamera()
 
                 // If cinematic is complete, switch to third person view
                 if (currentCinematicPoint == 0 && cinematicTimer == 0) {
+                    stopCinemtic2Music();
+                    playIdleEngine();
                     currentView = THIRD_PERSON;
                 }
             }
