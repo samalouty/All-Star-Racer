@@ -958,6 +958,14 @@ void renderCarSelectScreen() {
         x += carWidth + carSpacing;
     }
 
+    glColor3f(1.0f, 1.0f, 1.0f);
+    std::string instructions = "Click on a car to select it. Press Enter to start the game.";
+    int instructionsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)instructions.c_str());
+    glRasterPos2i((WIDTH - instructionsWidth) / 2, HEIGHT - 50);
+    for (char c : instructions) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
 
