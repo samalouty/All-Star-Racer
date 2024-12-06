@@ -739,6 +739,7 @@ float acceleration = 9.0f; // Acceleration in units per second^2
 //float deceleration = 3.0f; // Deceleration in units per second^2
 float turnSpeed = 90.0f; // Turn speed in degrees per second
 bool isAccelerating = false;
+bool engineSoundStarted = false;
 bool isBraking = false;
 bool menuMusicStarted = false;
 // second car controls 
@@ -862,6 +863,34 @@ void checkMciError(MCIERROR errorCode, const std::string& context) {
         mciGetErrorStringA(errorCode, errorMessage, sizeof(errorMessage));
         std::cerr << "Error in " << context << ": " << errorMessage << std::endl;
     }
+}
+
+
+void playEngineSound() {
+	const std::string& filename = "sounds/engine.wav";
+	std::string openCommand = "open \"" + filename + "\" type mpegvideo alias engineSound";
+
+	// Execute the open command and check for errors
+	MCIERROR errorCode = mciSendStringA(openCommand.c_str(), NULL, 0, NULL);
+	checkMciError(errorCode, "Opening engine sound");
+
+	std::string volumeCommand = "setaudio engineSound volume to 500";
+	errorCode = mciSendStringA(volumeCommand.c_str(), NULL, 0, NULL);
+	checkMciError(errorCode, "Playing engine sound");
+
+	// Execute the play command and check for errors
+	errorCode = mciSendStringA("play engineSound repeat", NULL, 0, NULL);
+	checkMciError(errorCode, "Playing engine sound");
+}
+
+void stopEngineSound() {
+	// Execute the stop command and check for errors
+	MCIERROR errorCode = mciSendStringA("stop engineSound", NULL, 0, NULL);
+	checkMciError(errorCode, "Stopping engine sound");
+
+	// Execute the close command and check for errors
+	errorCode = mciSendStringA("close engineSound", NULL, 0, NULL);
+	checkMciError(errorCode, "Closing engine sound");
 }
 
 void playIdleEngine() {
@@ -5146,6 +5175,7 @@ void updateCarPosition(float deltaTime) {
         if (!gravityEnabled) {
            playLoseSound();
 		   stopIdleEngine();
+           stopEngineSound();
         }
         gravityEnabled = true;
     }
@@ -5156,6 +5186,7 @@ void updateCarPosition(float deltaTime) {
         gameWon = true;
         playWinMusic();
         stopIdleEngine();
+        stopEngineSound();
         playerTime = 90.0f - gameTimer; // Calculate player's time
     }
 
@@ -5322,6 +5353,7 @@ void updateCarPosition2(float deltaTime) {
         /*printf("fffffffffffffffff");*/
         playWinMusic();
         stopIdleEngine();
+        stopEngineSound();
         gameWon = true;
         playerTime = 90.0f - gameTimer; // Calculate player's time
     }
@@ -6893,6 +6925,12 @@ void specialKeyboard(int key, int x, int y)
         break;
     case GLUT_KEY_UP:
         if (!isColliding) {
+            if (!engineSoundStarted) {
+				engineSoundStarted = true;
+                if (!gameOver && !gameWon)
+                    playEngineSound();
+                stopIdleEngine();
+            }
             if(carSpeed <= 20) wheelRotationX += 2.0f;
             wheelRotationX += 6.0f;
             isAccelerating = true;
@@ -6924,6 +6962,12 @@ void specialKeyboardUp(int key, int x, int y)
 		wheelRotationY = 0.0f; // Reset wheel rotation when key is released
 		break;
 	case GLUT_KEY_UP:
+        if (engineSoundStarted) {
+            engineSoundStarted = false;
+            if(!gameOver && !gameWon)
+                playIdleEngine();
+            stopEngineSound();
+        }
 		isAccelerating = false;
 		break;
 	case GLUT_KEY_DOWN:
