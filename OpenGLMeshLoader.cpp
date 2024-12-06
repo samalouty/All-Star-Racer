@@ -292,6 +292,7 @@ private:
     float duration;     // Total duration of effect in seconds
     float sunPosition[3]; // Sun position in the sky
     float sunBrightness;  // Sun brightness
+    bool started;
 
     float lerp(float a, float b, float t) const {
         return a + t * (b - a);
@@ -316,7 +317,12 @@ public:
         sunPosition[1] = -0.5f; // Reset to initial position
         sunPosition[2] = 1.0f;  // Reset to initial position
         sunBrightness = 0.0f;   // Reset brightness
+        started = true;
     }
+
+	void start() {
+		started = true;
+	}
 
     void update(float deltaTime) {
         time += deltaTime;
@@ -336,6 +342,7 @@ public:
 
     void apply() {
         float t = smoothStep(time / duration);
+        t = smoothStep(t);
 
         // Sky color transition (sunrise colors)
         float startR = 0.0f, startG = 0.0f, startB = 0.2f; // Dark blue
@@ -376,6 +383,7 @@ private:
     float duration;     // Total duration of effect in seconds
     float sunPosition[3]; // Sun position in the sky
     float sunBrightness;  // Sun brightness
+    bool started;
 
     float lerp(float a, float b, float t) const {
         return a + t * (b - a);
@@ -387,7 +395,7 @@ private:
 
 public:
     MovingSunEffect(float duration = 300.0f)
-        : time(0.0f), duration(duration), sunBrightness(0.0f) {
+        : time(0.0f), duration(duration), sunBrightness(0.0f), started(false) {
         sunPosition[0] = -1.0f; // Start from the left
         sunPosition[1] = -0.5f; // Start below the horizon
         sunPosition[2] = 1.0f;  // Sun is initially at a distant point on the z-axis
@@ -400,6 +408,10 @@ public:
         sunPosition[1] = -0.5f; // Reset to initial position
         sunPosition[2] = 1.0f;  // Reset to initial position
         sunBrightness = 0.0f;   // Reset brightness
+        started = true;
+    }
+    void start() {
+        started = true;
     }
 
     void update(float deltaTime) {
@@ -422,12 +434,23 @@ public:
         float t = smoothStep(time / duration);
 
         // Sky color transition (sunrise colors)
-        float startR = 0.0f, startG = 0.0f, startB = 0.2f; // Dark blue
-        float endR = 0.5f, endG = 0.7f, endB = 1.0f; // Light blue
+        float startR = 0.1f, startG = 0.1f, startB = 0.2f;
+        float midR = 0.7f, midG = 0.4f, midB = 0.3f;
+        float endR = 0.5f, endG = 0.7f, endB = 1.0f;
 
-        float r = lerp(startR, endR, t);
-        float g = lerp(startG, endG, t);
-        float b = lerp(startB, endB, t);
+        float r, g, b;
+        if (t < 0.5f) {
+            float t2 = t * 2.0f;
+            r = lerp(startR, midR, t2);
+            g = lerp(startG, midG, t2);
+            b = lerp(startB, midB, t2);
+        }
+        else {
+            float t2 = (t - 0.5f) * 2.0f;
+            r = lerp(midR, endR, t2);
+            g = lerp(midG, endG, t2);
+            b = lerp(midB, endB, t2);
+        }
 
         glClearColor(r, g, b, 1.0f);
 
@@ -4937,7 +4960,7 @@ void updateCarPosition2(float deltaTime) {
             lastCarPosition = carPosition;
         }
     }
-    if (!gameWon && score == 3) {
+    if (!gameWon && score == 27) {
         /*printf("fffffffffffffffff");*/
         gameWon = true;
         playerTime = 90.0f - gameTimer; // Calculate player's time

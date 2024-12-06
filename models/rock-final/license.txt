@@ -1,0 +1,11 @@
+Model Information:
+* title:	Obj_Nat_Rock_01
+* source:	https://sketchfab.com/3d-models/obj-nat-rock-01-62d63fd7d1dd416aac1496eb19c43cc0
+* author:	SaschaHenrichs (https://sketchfab.com/SaschaHenrichs)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Obj_Nat_Rock_01" (https://sketchfab.com/3d-models/obj-nat-rock-01-62d63fd7d1dd416aac1496eb19c43cc0) by SaschaHenrichs (https://sketchfab.com/SaschaHenrichs) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
