@@ -5134,6 +5134,18 @@ void updateCarPosition2(float deltaTime) {
         // Ensure the car stops moving forward
         carSpeed = std::min(carSpeed, 0.0f); // Prevent forward movement by setting carSpeed to zero
     }
+    if (checkCollisionWithBarriers2(carPosition)) {
+        collisionDetected = true; // Set collision flag to true
+
+        std::cout << "Collision" << std::endl;
+
+        // Push the car back slightly
+        carPosition.x -= sin(radians) * carSpeed * deltaTime;
+        carPosition.z -= cos(radians) * carSpeed * deltaTime;
+
+        // Ensure the car stops moving forward
+        carSpeed = std::min(carSpeed, 0.0f);
+    }
 
     wheelRotationX += carSpeed * 360.0f * deltaTime;
 
@@ -6871,9 +6883,10 @@ void LoadAssets2() {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
-    //if (!logModel.LoadModel("models/log/scene.gltf")) {
-    //    std::cerr << "Failed to load GLTF model" << std::endl;
-    //}
+
+    if (!logModel.LoadModel("models/log2/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
 
     if (!rockModel.LoadModel("models/rock/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
