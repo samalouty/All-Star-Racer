@@ -17,6 +17,7 @@
 #include <string>
 
 #define M_PI 3.14159265358979323846
+void goToNextLevel(); 
 
 
 GLuint shaderProgram;
@@ -53,201 +54,207 @@ public:
 
 class GLTFModel {
 public:
-	bool LoadModel(const std::string& filename) {
-		tinygltf::TinyGLTF loader;
-		std::string err;
-		std::string warn;
+    bool LoadModel(const std::string& filename) {
+        tinygltf::TinyGLTF loader;
+        std::string err;
+        std::string warn;
 
-		bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
+        bool ret = loader.LoadASCIIFromFile(&model, &err, &warn, filename);
 
-		if (!warn.empty()) {
-			std::cout << "GLTF loading warning: " << warn << std::endl;
-		}
+        if (!warn.empty()) {
+            std::cout << "GLTF loading warning: " << warn << std::endl;
+        }
 
-		if (!err.empty()) {
-			std::cerr << "GLTF loading error: " << err << std::endl;
-		}
+        if (!err.empty()) {
+            std::cerr << "GLTF loading error: " << err << std::endl;
+        }
 
-		if (!ret) {
-			std::cerr << "Failed to load glTF: " << filename << std::endl;
-			return false;
-		}
+        if (!ret) {
+            std::cerr << "Failed to load glTF: " << filename << std::endl;
+            return false;
+        }
 
-		return true;
-	}
+        return true;
+    }
 
-	void DrawModel(const glm::mat4& transform = glm::mat4(1.0f)) const {
-		const tinygltf::Scene& scene = model.scenes[model.defaultScene];
-		for (size_t i = 0; i < scene.nodes.size(); ++i) {
-			DrawNode(scene.nodes[i], transform);
-		}
-	}
+    void DrawModel(const glm::mat4& transform = glm::mat4(1.0f)) const {
+        const tinygltf::Scene& scene = model.scenes[model.defaultScene];
+        for (size_t i = 0; i < scene.nodes.size(); ++i) {
+            DrawNode(scene.nodes[i], transform);
+        }
+    }
+
+    void UnloadModel() {
+        for (const auto& entry : textureCache) {
+            glDeleteTextures(1, &entry.second);
+        }
+        textureCache.clear();
+
+        // Clear model data
+        model = tinygltf::Model();
+        std::cout << "Model and textures unloaded successfully." << std::endl;
+    }
 
 private:
-	tinygltf::Model model;
-	mutable std::unordered_map<int, GLuint> textureCache;
+    tinygltf::Model model;
+    mutable std::unordered_map<int, GLuint> textureCache;
 
-	void DrawNode(int nodeIndex, const glm::mat4& parentTransform) const {
-		const tinygltf::Node& node = model.nodes[nodeIndex];
+    void DrawNode(int nodeIndex, const glm::mat4& parentTransform) const {
+        const tinygltf::Node& node = model.nodes[nodeIndex];
 
-		glm::mat4 localTransform = glm::mat4(1.0f);
+        glm::mat4 localTransform = glm::mat4(1.0f);
 
-		if (node.matrix.size() == 16) {
-			localTransform = glm::make_mat4(node.matrix.data());
-		}
-		else {
-			if (node.translation.size() == 3) {
-				localTransform = glm::translate(localTransform,
-					glm::vec3(node.translation[0], node.translation[1], node.translation[2]));
-			}
+        if (node.matrix.size() == 16) {
+            localTransform = glm::make_mat4(node.matrix.data());
+        }
+        else {
+            if (node.translation.size() == 3) {
+                localTransform = glm::translate(localTransform,
+                    glm::vec3(node.translation[0], node.translation[1], node.translation[2]));
+            }
 
-			if (node.rotation.size() == 4) {
-				glm::quat q = glm::quat(node.rotation[3], node.rotation[0],
-					node.rotation[1], node.rotation[2]);
-				localTransform = localTransform * glm::mat4_cast(q);
-			}
+            if (node.rotation.size() == 4) {
+                glm::quat q = glm::quat(node.rotation[3], node.rotation[0],
+                    node.rotation[1], node.rotation[2]);
+                localTransform = localTransform * glm::mat4_cast(q);
+            }
 
-			if (node.scale.size() == 3) {
-				localTransform = glm::scale(localTransform,
-					glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
-			}
-		}
+            if (node.scale.size() == 3) {
+                localTransform = glm::scale(localTransform,
+                    glm::vec3(node.scale[0], node.scale[1], node.scale[2]));
+            }
+        }
 
-		glm::mat4 nodeTransform = parentTransform * localTransform;
+        glm::mat4 nodeTransform = parentTransform * localTransform;
 
-		if (node.mesh >= 0) {
-			DrawMesh(model.meshes[node.mesh], nodeTransform);
-		}
+        if (node.mesh >= 0) {
+            DrawMesh(model.meshes[node.mesh], nodeTransform);
+        }
 
-		for (int child : node.children) {
-			DrawNode(child, nodeTransform);
-		}
-	}
+        for (int child : node.children) {
+            DrawNode(child, nodeTransform);
+        }
+    }
 
-	void DrawMesh(const tinygltf::Mesh& mesh, const glm::mat4& transform) const {
-		glPushMatrix();
-		glMultMatrixf(glm::value_ptr(transform));
+    void DrawMesh(const tinygltf::Mesh& mesh, const glm::mat4& transform) const {
+        glPushMatrix();
+        glMultMatrixf(glm::value_ptr(transform));
 
-		for (const auto& primitive : mesh.primitives) {
-			if (primitive.indices < 0) continue;
+        for (const auto& primitive : mesh.primitives) {
+            if (primitive.indices < 0) continue;
 
-			// Set material properties before drawing
-			if (primitive.material >= 0) {
-				const auto& material = model.materials[primitive.material];
-				SetMaterial(material);
-			}
+            if (primitive.material >= 0) {
+                const auto& material = model.materials[primitive.material];
+                SetMaterial(material);
+            }
 
-			// Get vertex positions
-			const auto& posAccessor = model.accessors[primitive.attributes.at("POSITION")];
-			const auto& posView = model.bufferViews[posAccessor.bufferView];
-			const float* positions = reinterpret_cast<const float*>(
-				&model.buffers[posView.buffer].data[posView.byteOffset + posAccessor.byteOffset]);
+            const auto& posAccessor = model.accessors[primitive.attributes.at("POSITION")];
+            const auto& posView = model.bufferViews[posAccessor.bufferView];
+            const float* positions = reinterpret_cast<const float*>(
+                &model.buffers[posView.buffer].data[posView.byteOffset + posAccessor.byteOffset]);
 
-			// Get texture coordinates if available
-			const float* texcoords = nullptr;
-			if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end()) {
-				const auto& texAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
-				const auto& texView = model.bufferViews[texAccessor.bufferView];
-				texcoords = reinterpret_cast<const float*>(
-					&model.buffers[texView.buffer].data[texView.byteOffset + texAccessor.byteOffset]);
-			}
+            const float* texcoords = nullptr;
+            if (primitive.attributes.find("TEXCOORD_0") != primitive.attributes.end()) {
+                const auto& texAccessor = model.accessors[primitive.attributes.at("TEXCOORD_0")];
+                const auto& texView = model.bufferViews[texAccessor.bufferView];
+                texcoords = reinterpret_cast<const float*>(
+                    &model.buffers[texView.buffer].data[texView.byteOffset + texAccessor.byteOffset]);
+            }
 
-			// Get indices
-			const auto& indexAccessor = model.accessors[primitive.indices];
-			const auto& indexView = model.bufferViews[indexAccessor.bufferView];
-			const void* indices = &model.buffers[indexView.buffer].data[indexView.byteOffset +
-				indexAccessor.byteOffset];
+            const auto& indexAccessor = model.accessors[primitive.indices];
+            const auto& indexView = model.bufferViews[indexAccessor.bufferView];
+            const void* indices = &model.buffers[indexView.buffer].data[indexView.byteOffset +
+                indexAccessor.byteOffset];
 
-			// Draw the primitive
-			glBegin(GL_TRIANGLES);
-			for (size_t i = 0; i < indexAccessor.count; i++) {
-				unsigned int idx;
-				switch (indexAccessor.componentType) {
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
-					idx = ((unsigned short*)indices)[i];
-					break;
-				case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
-					idx = ((unsigned int*)indices)[i];
-					break;
-				default:
-					continue;
-				}
+            glBegin(GL_TRIANGLES);
+            for (size_t i = 0; i < indexAccessor.count; i++) {
+                unsigned int idx;
+                switch (indexAccessor.componentType) {
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_SHORT:
+                    idx = ((unsigned short*)indices)[i];
+                    break;
+                case TINYGLTF_COMPONENT_TYPE_UNSIGNED_INT:
+                    idx = ((unsigned int*)indices)[i];
+                    break;
+                default:
+                    continue;
+                }
 
-				if (texcoords) {
-					glTexCoord2f(texcoords[idx * 2], texcoords[idx * 2 + 1]);
-				}
-				glVertex3fv(&positions[idx * 3]);
-			}
-			glEnd();
-		}
+                if (texcoords) {
+                    glTexCoord2f(texcoords[idx * 2], texcoords[idx * 2 + 1]);
+                }
+                glVertex3fv(&positions[idx * 3]);
+            }
+            glEnd();
+        }
 
-		glPopMatrix();
-	}
+        glPopMatrix();
+    }
 
-	void SetMaterial(const tinygltf::Material& material) const {
-		// Set default material color
-		glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
+    void SetMaterial(const tinygltf::Material& material) const {
+        glColor4f(1.0f, 1.0f, 1.0f, 1.0f);
 
-		if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
-			const auto& texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
-			if (texture.source >= 0) {
-				GLuint textureId = GetOrCreateTexture(texture.source);
-				if (textureId != 0) {
-					glEnable(GL_TEXTURE_2D);
-					glBindTexture(GL_TEXTURE_2D, textureId);
-				}
-			}
-		}
-		else if (!material.pbrMetallicRoughness.baseColorFactor.empty()) {
-			glColor4f(
-				material.pbrMetallicRoughness.baseColorFactor[0],
-				material.pbrMetallicRoughness.baseColorFactor[1],
-				material.pbrMetallicRoughness.baseColorFactor[2],
-				material.pbrMetallicRoughness.baseColorFactor[3]
-			);
-		}
-	}
+        if (material.pbrMetallicRoughness.baseColorTexture.index >= 0) {
+            const auto& texture = model.textures[material.pbrMetallicRoughness.baseColorTexture.index];
+            if (texture.source >= 0) {
+                GLuint textureId = GetOrCreateTexture(texture.source);
+                if (textureId != 0) {
+                    glEnable(GL_TEXTURE_2D);
+                    glBindTexture(GL_TEXTURE_2D, textureId);
+                }
+            }
+        }
+        else if (!material.pbrMetallicRoughness.baseColorFactor.empty()) {
+            glColor4f(
+                material.pbrMetallicRoughness.baseColorFactor[0],
+                material.pbrMetallicRoughness.baseColorFactor[1],
+                material.pbrMetallicRoughness.baseColorFactor[2],
+                material.pbrMetallicRoughness.baseColorFactor[3]
+            );
+        }
+    }
 
-	GLuint GetOrCreateTexture(int sourceIndex) const {
-		if (textureCache.find(sourceIndex) != textureCache.end()) {
-			return textureCache.at(sourceIndex);
-		}
+    GLuint GetOrCreateTexture(int sourceIndex) const {
+        if (textureCache.find(sourceIndex) != textureCache.end()) {
+            return textureCache.at(sourceIndex);
+        }
 
-		const auto& image = model.images[sourceIndex];
-		GLuint textureId;
-		glGenTextures(1, &textureId);
-		glBindTexture(GL_TEXTURE_2D, textureId);
+        const auto& image = model.images[sourceIndex];
+        GLuint textureId;
+        glGenTextures(1, &textureId);
+        glBindTexture(GL_TEXTURE_2D, textureId);
 
-		GLenum format = GL_RGBA;
-		if (image.component == 3) {
-			format = GL_RGB;
-		}
+        GLenum format = GL_RGBA;
+        if (image.component == 3) {
+            format = GL_RGB;
+        }
 
-		glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, &image.image[0]);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, image.width, image.height, 0, format, GL_UNSIGNED_BYTE, &image.image[0]);
 
-		GLenum type = GL_UNSIGNED_BYTE;
-		if (image.bits == 16) {
-			type = GL_UNSIGNED_SHORT;
-		}
+        GLenum type = GL_UNSIGNED_BYTE;
+        if (image.bits == 16) {
+            type = GL_UNSIGNED_SHORT;
+        }
 
-		GLint internalFormat = (format == GL_RGB) ? GL_RGB8 : GL_RGBA8;
+        GLint internalFormat = (format == GL_RGB) ? GL_RGB8 : GL_RGBA8;
 
-		GLint buildMipmapsResult = gluBuild2DMipmaps(GL_TEXTURE_2D, internalFormat, image.width, image.height, format, type, image.image.data());
+        GLint buildMipmapsResult = gluBuild2DMipmaps(GL_TEXTURE_2D, internalFormat, image.width, image.height, format, type, image.image.data());
 
-		if (buildMipmapsResult != 0) {
-			std::cerr << "Failed to build mipmaps for texture. GLU error: " << gluErrorString(buildMipmapsResult) << std::endl;
-			glDeleteTextures(1, &textureId);
-			return 0;
-		}
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+        if (buildMipmapsResult != 0) {
+            std::cerr << "Failed to build mipmaps for texture. GLU error: " << gluErrorString(buildMipmapsResult) << std::endl;
+            glDeleteTextures(1, &textureId);
+            return 0;
+        }
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
-		textureCache[sourceIndex] = textureId;
-		return textureId;
-	}
+        textureCache[sourceIndex] = textureId;
+        return textureId;
+    }
 };
+
 
 
 struct Triangle {
@@ -639,7 +646,9 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 2; 
+int level = 1; 
+boolean selectingCar = true;
+int selectedCar = 0; 
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -683,7 +692,7 @@ bool isBraking = false;
 // second car controls 
 float acceleration2 = 9.0f; // Acceleration in units per second^2
 float deceleration2 = 50.0f; // Deceleration in units per second^2
-float turnSpeed2 = 150.0f; // Turn speed in degrees per second
+float turnSpeed2 = 120.0f; // Turn speed in degrees per second
 float maxSpeed2 = 30.0f; // Maximum speed in units per second
 
 float cameraDistance = 8.0f; // Distance behind the car
@@ -808,6 +817,188 @@ void renderStreetlights() {
     }
 }
 
+//=======================================================================
+// Car Select Screen Functions
+//=======================================================================
+struct Car {
+    std::string name;
+    std::string drivetrain;
+    int weight;
+    int horsepower;
+    int performancePoints;
+    GLuint textureID; // Texture ID for car image
+};
+
+std::vector<Car> cars;
+int selectedCarIndex = -1;
+int hoverCarIndex = -1;
+
+GLuint loadTexture(const char* path) {
+    int width, height, nrChannels;
+    unsigned char* data = stbi_load(path, &width, &height, &nrChannels, 0);
+    if (!data) {
+        std::cerr << "Failed to load texture: " << path << std::endl;
+        return 0;
+    }
+
+    GLuint textureID;
+    glGenTextures(1, &textureID);
+    glBindTexture(GL_TEXTURE_2D, textureID);
+
+    GLenum format = GL_RGB;
+    if (nrChannels == 4) {
+        format = GL_RGBA;
+    }
+
+    // Old version for generating mipmaps
+    gluBuild2DMipmaps(GL_TEXTURE_2D, format, width, height, format, GL_UNSIGNED_BYTE, data);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+    stbi_image_free(data);
+    return textureID;
+}
+
+GLuint backgroundTexture; 
+
+
+void loadCars() {
+    backgroundTexture = loadTexture("textures/background3.jpg");
+    cars.push_back({ "Koenigsegg Agera", "SW", 1395, 1160, 1176, loadTexture("textures/koenigsegg2.png") });
+    cars.push_back({ "Bugatti Bolide", "DE", 1450, 1578, 1600, loadTexture("textures/bugatti2.png") });
+
+}
+
+void renderCarSelectScreen() {
+
+    glDisable(GL_LIGHTING);
+    glDisable(GL_DEPTH_TEST);
+    glDisable(GL_CULL_FACE);
+
+    glEnable(GL_BLEND);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0, WIDTH, HEIGHT, 0);
+
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    // Draw background
+    glBindTexture(GL_TEXTURE_2D, backgroundTexture);
+    glEnable(GL_TEXTURE_2D);
+    glColor4f(1.0f, 1.0f, 1.0f, 0.5f);
+    glBegin(GL_QUADS);
+    glTexCoord2f(0, 0); glVertex2f(0, 0);
+    glTexCoord2f(1, 0); glVertex2f(WIDTH, 0);
+    glTexCoord2f(1, 1); glVertex2f(WIDTH, HEIGHT);
+    glTexCoord2f(0, 1); glVertex2f(0, HEIGHT);
+    glEnd();
+    glDisable(GL_TEXTURE_2D);
+
+    // Draw title
+    glColor3f(1.0f, 1.0f, 1.0f);
+    std::string title = "Select Your Car";
+    int titleWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)title.c_str());
+    int titleX = (WIDTH - titleWidth) / 2;
+    glRasterPos2i(titleX, 40);
+    for (char c : title) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+
+    // Draw car selection
+    int carWidth = 300;
+    int carHeight = 150;
+    int carSpacing = 50;
+
+    int totalWidth = cars.size() * (carWidth + carSpacing) - carSpacing;
+    int x = (WIDTH - totalWidth) / 2;
+    int y = HEIGHT / 2 - carHeight / 2;
+
+    for (size_t i = 0; i < cars.size(); ++i) {
+        // Draw car image
+        glBindTexture(GL_TEXTURE_2D, cars[i].textureID);
+        glEnable(GL_TEXTURE_2D);
+        glBegin(GL_QUADS);
+        glTexCoord2f(0, 0); glVertex2i(x, y);
+        glTexCoord2f(1, 0); glVertex2i(x + carWidth, y);
+        glTexCoord2f(1, 1); glVertex2i(x + carWidth, y + carHeight);
+        glTexCoord2f(0, 1); glVertex2i(x, y + carHeight);
+        glEnd();
+        glDisable(GL_TEXTURE_2D);
+
+        if (i == selectedCar - 1) {  // Highlight the selected car
+            glColor3f(0.0f, 1.0f, 0.0f);  // Green for selected
+        }
+        else if (i == hoverCarIndex) {
+            glColor3f(1.0f, 1.0f, 0.0f);  // Yellow for hover
+        }
+        else {
+            glColor3f(1.0f, 1.0f, 1.0f);  // White for normal
+        }
+        glLineWidth(2.0f);
+        glBegin(GL_LINE_LOOP);
+        glVertex2i(x - 5, y - 5);
+        glVertex2i(x + carWidth + 5, y - 5);
+        glVertex2i(x + carWidth + 5, y + carHeight + 5);
+        glVertex2i(x - 5, y + carHeight + 5);
+        glEnd();
+
+        // Draw car name
+        glColor3f(1.0f, 1.0f, 1.0f);
+        int nameWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_12, (const unsigned char*)cars[i].name.c_str());
+        glRasterPos2i(x + (carWidth - nameWidth) / 2, y + carHeight + 20);
+        for (char c : cars[i].name) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+        }
+
+        // Draw car stats
+        std::string stats = cars[i].drivetrain + " | " + std::to_string(cars[i].weight) + "kg | " + std::to_string(cars[i].horsepower) + "hp | " + std::to_string(cars[i].performancePoints) + "PP";
+        int statsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_12, (const unsigned char*)stats.c_str());
+        glRasterPos2i(x + (carWidth - statsWidth) / 2, y + carHeight + 40);
+        for (char c : stats) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+        }
+
+        // Draw selection box
+        if (i == selectedCarIndex || i == hoverCarIndex) {
+            glColor3f(1.0f, 1.0f, 0.0f);
+            glLineWidth(2.0f);
+            glBegin(GL_LINE_LOOP);
+            glVertex2i(x - 5, y - 5);
+            glVertex2i(x + carWidth + 5, y - 5);
+            glVertex2i(x + carWidth + 5, y + carHeight + 5);
+            glVertex2i(x - 5, y + carHeight + 5);
+            glEnd();
+        }
+
+        x += carWidth + carSpacing;
+    }
+
+    glColor3f(1.0f, 1.0f, 1.0f);
+    std::string instructions = "Click on a car to select it. Press Enter to start the game.";
+    int instructionsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)instructions.c_str());
+    glRasterPos2i((WIDTH - instructionsWidth) / 2, HEIGHT - 50);
+    for (char c : instructions) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
+    }
+
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+
+    glMatrixMode(GL_MODELVIEW);
+    glPopMatrix();
+
+}
+
+
+
 
 //=======================================================================
 // Collision Functions
@@ -832,77 +1023,6 @@ bool isPointInTriangle(const glm::vec2& p, const glm::vec2& a, const glm::vec2& 
     return (u >= 0) && (v >= 0) && (u + v <= 1);
 }
 
-// Function to load triangles from GLTF model
-std::vector<Triangle> loadTrackTriangles(const std::string& filepath) {
-    tinygltf::Model model;
-    tinygltf::TinyGLTF loader;
-    std::string err, warn;
-
-    if (!loader.LoadASCIIFromFile(&model, &err, &warn, filepath)) {
-        std::cerr << "Failed to load GLTF file: " << err << "\n";
-        exit(EXIT_FAILURE);
-    }
-
-    std::vector<Triangle> triangles;
-
-    for (const auto& mesh : model.meshes) {
-        for (const auto& primitive : mesh.primitives) {
-            const auto& accessor = model.accessors[primitive.indices];
-            const auto& bufferView = model.bufferViews[accessor.bufferView];
-            const auto& buffer = model.buffers[bufferView.buffer];
-            const auto& indices = reinterpret_cast<const unsigned short*>(
-                &buffer.data[bufferView.byteOffset + accessor.byteOffset]);
-
-            const auto& positionAccessor = model.accessors[primitive.attributes.at("POSITION")];
-            const auto& positionBufferView = model.bufferViews[positionAccessor.bufferView];
-            const auto& positionBuffer = model.buffers[positionBufferView.buffer];
-            const auto& positions = reinterpret_cast<const float*>(
-                &positionBuffer.data[positionBufferView.byteOffset + positionAccessor.byteOffset]);
-
-            for (size_t i = 0; i < accessor.count; i += 3) {
-                Triangle tri = {
-                    glm::vec3(positions[indices[i] * 3], positions[indices[i] * 3 + 1], positions[indices[i] * 3 + 2]),
-                    glm::vec3(positions[indices[i + 1] * 3], positions[indices[i + 1] * 3 + 1], positions[indices[i + 1] * 3 + 2]),
-                    glm::vec3(positions[indices[i + 2] * 3], positions[indices[i + 2] * 3 + 1], positions[indices[i + 2] * 3 + 2])
-                };
-                triangles.push_back(tri);
-            }
-        }
-    }
-
-    return triangles;
-}
-
-// Function to find the y value for the car's position
-float findCarHeight(const glm::vec3& carPosition, const std::vector<Triangle>& trackTriangles) {
-    for (const auto& tri : trackTriangles) {
-        glm::vec2 p(carPosition.x, carPosition.z);
-        glm::vec2 a(tri.v1.x, tri.v1.z);
-        glm::vec2 b(tri.v2.x, tri.v2.z);
-        glm::vec2 c(tri.v3.x, tri.v3.z);
-
-        if (isPointInTriangle(p, a, b, c)) {
-            // Barycentric interpolation to find height
-            glm::vec3 ab = tri.v2 - tri.v1;
-            glm::vec3 ac = tri.v3 - tri.v1;
-            glm::vec3 ap = glm::vec3(carPosition.x, 0.0f, carPosition.z) - tri.v1;
-
-            float areaABC = glm::length(glm::cross(ab, ac));
-            float areaPBC = glm::length(glm::cross(tri.v2 - glm::vec3(carPosition.x, 0, carPosition.z),
-                tri.v3 - glm::vec3(carPosition.x, 0, carPosition.z)));
-            float areaPCA = glm::length(glm::cross(tri.v3 - glm::vec3(carPosition.x, 0, carPosition.z),
-                tri.v1 - glm::vec3(carPosition.x, 0, carPosition.z)));
-
-            float alpha = areaPBC / areaABC;
-            float beta = areaPCA / areaABC;
-            float gamma = 1.0f - alpha - beta;
-
-            return alpha * tri.v1.y + beta * tri.v2.y + gamma * tri.v3.y;
-        }
-    }
-
-    return carPosition.y; // Default to current height if no triangle found
-}
 
 struct Vertex {
     float x; // X coordinate
@@ -913,9 +1033,6 @@ struct Vertex {
     Vertex(float x, float y, float z) : x(x), y(y), z(z) {}
 
 };
-
-std::vector<Triangle> trackTriangles;
-
 
 std::vector<Vertex> trackVertices = {
     {76.6958, 0, 127.19},
@@ -3009,6 +3126,14 @@ std::vector<Vertex> trackVertices = {
 
 
 std::vector<Vertex> trackVertices2 = {
+    {-98.9287, 0, 212.075},
+    {-102.207, 0, 213.294},
+    {-231.01, 0, 288.671}, 
+    {-227.259, 0, 313.454},
+    {-200.92, 0, 233.601},
+    {-97.4346, 0, 220.877}, 
+    {-65.4639, 0, 234.629},
+    {-88.3762, 0, 221.856},
     {-220.059, 0, 308.132}, 
     {-84.9432, 0, 230.151}, 
     {-53.0841, 0, -26.9856},
@@ -4922,6 +5047,8 @@ void updateCarPosition2(float deltaTime) {
     if (!collisionDetected) { // Allow movement only if no collision or moving backward
         carPosition.x += sin(radians) * carSpeed * deltaTime;
         carPosition.z += cos(radians) * carSpeed * deltaTime;
+        std::cout << "Car Pos: ";
+        carPosition.print();
     }
     else {
         if (carSpeed < 0) {
@@ -5247,7 +5374,7 @@ void updateCamera()
                 yawLookAt.y * sin(pitchRadians) + yawLookAt.z * cos(pitchRadians)
             );
 
-            if (level == 1) {
+            if (selectedCar == 1) {
                 Eye = Vector(
                     carPosition.x + rotatedCameraOffset.x,
                     carPosition.y + rotatedCameraOffset.y,
@@ -5525,6 +5652,25 @@ void drawRoundedRectOutline(float x, float y, float width, float height, float r
     glEnd();
 }
 
+void renderCenteredText(const char* text, float screenWidth, float posY) {
+    // Calculate the width of the text
+    int textWidth = 0;
+    for (const char* c = text; *c != '\0'; c++) {
+        textWidth += glutBitmapWidth(GLUT_BITMAP_HELVETICA_18, *c);
+    }
+
+    // Calculate the X position to center the text
+    float posX = (screenWidth - textWidth) / 2.0f;
+
+    // Set the raster position for the text
+    glRasterPos2f(posX, posY);
+
+    // Render the text
+    for (const char* c = text; *c != '\0'; c++) {
+        glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+    }
+}
+
 void drawHUD() {
 
     if (currentView == CINEMATIC)
@@ -5541,11 +5687,22 @@ void drawHUD() {
         glColor3f(0.0f, 0.0f, 0.0f);  // White color for text
         glRasterPos2i(WIDTH / 2 - 70, HEIGHT - 50);
 
-        const char* text = "Press Enter to Start";
-        for (const char* c = text; *c != '\0'; c++) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+        if (level == 1) {
+            const char* text = "Press Enter to Start";
+            for (const char* c = text; *c != '\0'; c++) {
+                glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+            }
         }
+		else {
+            const char* text1 = "You need funds for a water bottle and you don't have money, collect 0.5 euros quickly!";
+            const char* text2 = "Press enter to start";
 
+            // Render first line (at the top of the screen)
+            renderCenteredText(text1, WIDTH, HEIGHT - 20);
+
+            // Render second line (below the first line)
+            renderCenteredText(text2, WIDTH, HEIGHT - 60);
+		}
         glMatrixMode(GL_PROJECTION);
         glPopMatrix();
         glMatrixMode(GL_MODELVIEW);
@@ -5719,6 +5876,7 @@ void resetGame() {
     playerTime = 0.0f;
     nitros = originalNitros;
 	coins = originalCoins;
+    timerStarted = false;
     score = 0; 
     sunEffect.reset();
     sunrise.reset();
@@ -6080,150 +6238,172 @@ void renderHorizontalBarrier() {
 //=======================================================================
 void myDisplay(void)
 {
-    static int lastTime = 0;
-    int currentTime = glutGet(GLUT_ELAPSED_TIME);
-    float deltaTime = (currentTime - lastTime) / 1000.0f;
-    lastTime = currentTime;
-    handleCarControls(deltaTime);
-    updateCarPosition(deltaTime);
-    if (checkCollisionWithObstacles(carPosition)) {
-        carSpeed = 0;
-        isColliding = true;
-        applyCollisionRecoil(deltaTime);
+    if (!selectingCar) {
+        static int lastTime = 0;
+        int currentTime = glutGet(GLUT_ELAPSED_TIME);
+        float deltaTime = (currentTime - lastTime) / 1000.0f;
+        lastTime = currentTime;
+        handleCarControls(deltaTime);
+        updateCarPosition(deltaTime);
+        if (checkCollisionWithObstacles(carPosition)) {
+            carSpeed = 0;
+            isColliding = true;
+            applyCollisionRecoil(deltaTime);
+        }
+        else {
+            isColliding = false;
+        }
+        if (checkCollisionWithNitros(carPosition, nitros))
+        {
+            isNitroActive = true;
+        }
+        updateSunPosition(deltaTime);
+        updateNitroAnimation();
+        //carPosition.print();
+        glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        updateCamera();
+        glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
+        glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
+        glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
+
+
+        if (sunVisibility > 0.0f) {
+            glPushMatrix();
+            glTranslatef(sunPosition.x, sunPosition.y, sunPosition.z);
+            glDisable(GL_LIGHTING);
+            glColor4f(sunColor.r, sunColor.g, sunColor.b, sunVisibility);
+            glEnable(GL_LIGHTING);
+            glPopMatrix();
+        }
+
+        // Draw skybox
+        glPushMatrix();
+        GLUquadricObj* qobj;
+        qobj = gluNewQuadric();
+        glTranslated(50, 0, 0);
+        glRotated(90, 1, 0, 1);
+        glBindTexture(GL_TEXTURE_2D, tex);
+        gluQuadricTexture(qobj, true);
+        gluQuadricNormals(qobj, GL_SMOOTH);
+        gluSphere(qobj, 1000, 100, 100);
+        gluDeleteQuadric(qobj);
+        glPopMatrix();
+
+        setupLighting();
+        glPushMatrix();
+        glTranslatef(10, 0, 0);
+        glScalef(0.7, 0.7, 0.7);
+        model_tree.Draw();
+        glPopMatrix();
+
+
+        glPushMatrix();
+        glTranslatef(0, 0, 0);  // Position your model
+        glScalef(1, 1, 1);  // Scale if needed
+        glRotatef(90, 0, 1, 0);  // Rotate if needed
+        gltfModel1.DrawModel();
+        glPopMatrix();
+#
+
+        renderCones();
+        renderNitros();
+
+        if(selectedCar == 1)
+        renderCar();
+        else if(selectedCar == 2)
+        renderCar2();
+
+        // Update car model position and rotation
+        glPushMatrix();
+        glTranslatef(112.226, 0, 226.23);
+        glRotatef(270, 0, 1, 0);
+        glScalef(1.2, 1.2, 1.2);
+        finishModel.DrawModel();
+        glPopMatrix();
+
+        renderHorizontalBarrier();
+
+        renderGoRight();
+
+
+        drawHUD();
+
     }
     else {
-		isColliding = false;
+
+        renderCarSelectScreen();
+
     }
-	if (checkCollisionWithNitros(carPosition, nitros))
-	{
-        isNitroActive = true;
-	}
-    updateSunPosition(deltaTime);
-    updateNitroAnimation();
-    //carPosition.print();
-    glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    updateCamera();
-    glLightfv(GL_LIGHT0, GL_POSITION, lightPosition);
-    glLightfv(GL_LIGHT0, GL_AMBIENT, lightAmbient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, lightDiffuse);
-
-
-    if (sunVisibility > 0.0f) {
-        glPushMatrix();
-        glTranslatef(sunPosition.x, sunPosition.y, sunPosition.z);
-        glDisable(GL_LIGHTING);
-        glColor4f(sunColor.r, sunColor.g, sunColor.b, sunVisibility);
-        glEnable(GL_LIGHTING);
-        glPopMatrix();
-    }
-
-    // Draw skybox
-    glPushMatrix();
-    GLUquadricObj* qobj;
-    qobj = gluNewQuadric();
-    glTranslated(50, 0, 0);
-    glRotated(90, 1, 0, 1);
-    glBindTexture(GL_TEXTURE_2D, tex);
-    gluQuadricTexture(qobj, true);
-    gluQuadricNormals(qobj, GL_SMOOTH);
-    gluSphere(qobj, 1000, 100, 100);
-    gluDeleteQuadric(qobj);
-    glPopMatrix();
-   
-    setupLighting();
-    glPushMatrix();
-    glTranslatef(10, 0, 0);
-    glScalef(0.7, 0.7, 0.7);
-    model_tree.Draw();
-    glPopMatrix();
-   
-    
-    glPushMatrix();
-    glTranslatef(0, 0, 0);  // Position your model
-    glScalef(1, 1, 1);  // Scale if needed
-    glRotatef(90, 0, 1, 0);  // Rotate if needed
-    gltfModel1.DrawModel();
-    glPopMatrix();
-#
-    
-    renderCones();
-	renderNitros();
-
-    renderCar();
-    // Update car model position and rotation
-    glPushMatrix();
-    glTranslatef(112.226, 0, 226.23);
-    glRotatef(270, 0, 1, 0);
-    glScalef(1.2, 1.2, 1.2);
-    finishModel.DrawModel();
-    glPopMatrix();
-
-    renderHorizontalBarrier(); 
-
-	renderGoRight();
-
-    
-    drawHUD();
-
 
     glutSwapBuffers();
 }
 
 void myDisplay2(void) {
 
-    static int lastTime = 0;
-    int currentTime = glutGet(GLUT_ELAPSED_TIME);
-    float deltaTime = (currentTime - lastTime) / 1000.0f;
-    lastTime = currentTime;
-    handleCarControls2(deltaTime);
-    updateCarPosition2(deltaTime);
+    if (!selectingCar) {
 
-    //glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
-    sunrise.update(deltaTime);
-    sunEffect.update(deltaTime);
+        static int lastTime = 0;
+        int currentTime = glutGet(GLUT_ELAPSED_TIME);
+        float deltaTime = (currentTime - lastTime) / 1000.0f;
+        lastTime = currentTime;
+        handleCarControls2(deltaTime);
+        updateCarPosition2(deltaTime);
 
-    // Clear the screen and apply the sunrise effect
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    sunrise.apply();
-    sunEffect.apply();
-    updateCamera();
+        //glClearColor(currentSkyColor.r, currentSkyColor.g, currentSkyColor.b, 1.0f);
+        sunrise.update(deltaTime);
+        sunEffect.update(deltaTime);
 
-    // draw moscow 
+        // Clear the screen and apply the sunrise effect
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+        sunrise.apply();
+        sunEffect.apply();
+        updateCamera();
 
-    glPushMatrix();
-    //glTranslatef(181.899, 0, 231.466);
-    //glRotatef(270, 0, 1, 0);
-    glScalef(1, 1, 1);
-    moscowModel.DrawModel();
-    glPopMatrix();
+        // draw moscow 
 
-   /* glPushMatrix();
-    glTranslatef(1, 1, 2);
-    glRotatef(150, 1, 0, 0);
-    glScalef(1, 1, 1);
-    rock1Model.DrawModel();
-    glPopMatrix();*/
+        glPushMatrix();
+        //glTranslatef(181.899, 0, 231.466);
+        //glRotatef(270, 0, 1, 0);
+        glScalef(1, 1, 1);
+        moscowModel.DrawModel();
+        glPopMatrix();
 
-    /*glPushMatrix();
-    glTranslatef(5, 1, 1);
-    glRotatef(70, 1, 0, 0);
-    glScalef(1, 1, 1);
-    rock2Model.DrawModel();
-    glPopMatrix();*/
+        /* glPushMatrix();
+         glTranslatef(1, 1, 2);
+         glRotatef(150, 1, 0, 0);
+         glScalef(1, 1, 1);
+         rock1Model.DrawModel();
+         glPopMatrix();*/
 
-    setupLighting();
-    renderCar2();
-    renderCoins();
-    renderStreetlights();
-	updateCoinAnimation();
+         /*glPushMatrix();
+         glTranslatef(5, 1, 1);
+         glRotatef(70, 1, 0, 0);
+         glScalef(1, 1, 1);
+         rock2Model.DrawModel();
+         glPopMatrix();*/
 
-	if (checkCollisionWithCoins(carPosition, coins))
-	{
-		score = score + 1;
+        setupLighting();
+
+        if (selectedCar == 1)
+            renderCar();
+        else if (selectedCar == 2)
+            renderCar2();
+
+        renderCoins();
+        renderStreetlights();
+        updateCoinAnimation();
+
+        if (checkCollisionWithCoins(carPosition, coins))
+        {
+            score = score + 1;
+        }
+
+        drawHUD();
+    }
+    else {
+		renderCarSelectScreen();
 	}
-
-    drawHUD();
 
     glutSwapBuffers();
 
@@ -6233,17 +6413,36 @@ void myDisplay2(void) {
 //=======================================================================
 // Keyboard Function
 //=======================================================================
+
+
+
+boolean secondLevelLoading; 
+
 void myKeyboard(unsigned char button, int x, int y)
 {
+    if (selectingCar && button == 13 && selectedCar != 0) {  // 13 is the ASCII code for Enter
+        selectingCar = false;
+        std::cout << "Selected car: " << selectedCar << std::endl;
+        // Initialize game with selected car
+        // You might want to call a function here to set up the game based on the selected car
+        glutPostRedisplay();
+    }
+
     if (isRespawning || collisionRecoil > 0) {
         return;
     }
     if(gameOver || gameWon)
         {
-		if (button == 'r' || button == 'R')
+		if ((button == 'r' || button == 'R') && !secondLevelLoading)
 		{
 			resetGame();
 		}
+        if (button == 'n' || button == 'N') {
+            secondLevelLoading = true; 
+            goToNextLevel(); 
+            resetGame();
+
+        }
 		return;
 	}
 	switch (button)
@@ -6349,6 +6548,9 @@ void specialKeyboard(int key, int x, int y)
         wheelRotationX -= 6.0f;
         isAccelerating = false;
         isBraking = true;
+        if (!timerStarted) {
+            timerStarted = true;
+        }
         break;
     }
     glutPostRedisplay();
@@ -6409,6 +6611,26 @@ void myMouse(int button, int state, int x, int y)
 {
 	y = HEIGHT - y;
 
+    if (selectingCar && button == GLUT_LEFT_BUTTON && state == GLUT_DOWN) {
+        y = HEIGHT - y;  // Invert y coordinate
+
+        int carWidth = 300;
+        int carHeight = 150;
+        int carSpacing = 50;
+        int totalWidth = cars.size() * (carWidth + carSpacing) - carSpacing;
+        int startX = (WIDTH - totalWidth) / 2;
+        int startY = HEIGHT / 2 - carHeight / 2;
+
+        for (size_t i = 0; i < cars.size(); ++i) {
+            int carX = startX + i * (carWidth + carSpacing);
+            if (x >= carX && x <= carX + carWidth && y >= startY && y <= startY + carHeight) {
+                selectedCar = i + 1;  // Set the selected car
+                glutPostRedisplay();
+                break;
+            }
+        }
+    }
+
 	if (state == GLUT_DOWN)
 	{
 		cameraZoom = y;
@@ -6452,8 +6674,6 @@ void LoadAssets()
 	// Loading Model files
 	model_house.Load("Models/house/house.3DS");
 	model_tree.Load("Models/tree/Tree1.3ds");
-	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
-
 
     
 	if (!gltfModel1.LoadModel("models/track5/scene.gltf")) {
@@ -6465,6 +6685,14 @@ void LoadAssets()
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
+    if (!bugattiModel.LoadModel("models/bugatti-no-wheels/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+
+    if (!blueWheelModel.LoadModel("models/blue-wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
 
 	if (!redWheelsFrontLeft1.LoadModel("models/wheel/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
@@ -6522,6 +6750,22 @@ void LoadAssets()
 	loadBMP(&tex, "Textures/blu-sky-3.bmp", true);
 }
 
+void UnloadAssets() {
+    gltfModel1.UnloadModel();
+    carModel1.UnloadModel();
+    redWheelsFrontLeft1.UnloadModel();
+    redWheelsFrontRight1.UnloadModel();
+    redWheelsBackLeft1.UnloadModel();
+    redWheelsBackRight1.UnloadModel();
+    coneModel.UnloadModel();
+    nitroModel.UnloadModel();
+    finishModel.UnloadModel();
+    horizontalTraffic.UnloadModel();
+    trafficObstacle.UnloadModel();
+    bugattiModel.UnloadModel();
+    blueWheelModel.UnloadModel();
+}
+
 // Load Level 2
 
 void LoadAssets2() {
@@ -6567,15 +6811,70 @@ void LoadAssets2() {
  //       // Handle error
  //   }
 
+    if (!carModel1.LoadModel("models/red-car-no-wheels/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
     if (!blueWheelModel.LoadModel("models/blue-wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!redWheelsFrontLeft1.LoadModel("models/wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!redWheelsFrontRight1.LoadModel("models/wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!redWheelsBackLeft1.LoadModel("models/wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!redWheelsBackRight1.LoadModel("models/wheel/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
         // Handle error
     }
 
 
 
-
     
+
+}
+
+void goToNextLevel() {
+    UnloadAssets();
+    LoadAssets2();
+    selectingCar = true;
+    timerStarted = false;
+    gameTimer = 90.0f;
+    playerTime = 0.0f;
+    gameOver = false;
+    gameWon = false;
+    isNitroActive = false;
+    carPosition = Vector(0, 0, 0);  // Reset car position
+    carRotation = 0;  // Reset car rotation
+    carSpeed = 0;  // Reset car speed
+    wheelRotationX = 0;  // Reset wheel rotation
+    wheelRotationY = 0;  // Reset wheel rotation
+    sunsetProgress = 0.0f;  // Reset sunset progress
+    gravityEnabled = false;
+    nitros = originalNitros;
+    coins = originalCoins;
+    score = 0;
+    sunEffect.reset();
+    sunrise.reset();
+    level = 2;
+    currentView = CINEMATIC;
+    secondLevelLoading = false;
+    // make my display 2 the current display
+    glutDisplayFunc(myDisplay2);
+    glutPostRedisplay();
 
 }
 
@@ -6627,9 +6926,11 @@ void main(int argc, char** argv)
 	myInit();
 
     if (level == 1) {
+        loadCars();
         LoadAssets();
     }
     else {
+        loadCars();
         LoadAssets2();
 	
     }
