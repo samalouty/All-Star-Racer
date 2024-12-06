@@ -912,6 +912,8 @@ void playLoseSound() {
 }
 
 
+float headLightIntensity = 0.0f;
+float headlightColor = 0.0f;
 
 // Function to set up the headlights
 void setupLighting() {
@@ -922,8 +924,8 @@ void setupLighting() {
     //glLightfv(GL_LIGHT2, GL_POSITION, headlight1_pos);     // Position
     //glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, headlight_dir); // Direction
     glLightf(GL_LIGHT2, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
-    glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, 10.0f);          // Intensity falloff
-    GLfloat lightColor[] = { 1.0f, 1.0f, 0.8f, 1.0f };     // Warm white
+    glLightf(GL_LIGHT2, GL_SPOT_EXPONENT, headLightIntensity);          // Intensity falloff
+    GLfloat lightColor[] = { headlightColor, headlightColor, headlightColor, 1.0f };     // Warm white
     glLightfv(GL_LIGHT2, GL_DIFFUSE, lightColor);
     glLightfv(GL_LIGHT2, GL_SPECULAR, lightColor);
 
@@ -932,7 +934,7 @@ void setupLighting() {
     //glLightfv(GL_LIGHT1, GL_POSITION, headlight2_pos);     // Position
     //glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, headlight_dir); // Direction
     glLightf(GL_LIGHT1, GL_SPOT_CUTOFF, 20.0f);            // Cone angle
-    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, 5.0f);          // Intensity falloff
+    glLightf(GL_LIGHT1, GL_SPOT_EXPONENT, headLightIntensity);          // Intensity falloff
     glLightfv(GL_LIGHT1, GL_DIFFUSE, lightColor);
     glLightfv(GL_LIGHT1, GL_SPECULAR, lightColor);
 }
@@ -6437,7 +6439,7 @@ void renderCar2() {
     float wheelOffsetZFront = -2.0f; // Forward offset for front wheels
     float wheelOffsetZBack = 1.8f; // Backward offset for back wheels
     float scaleBlueWheel = 0.14f;
-
+    
     glDisable(GL_LIGHT0);
     glDisable(GL_LIGHT1);
     glDisable(GL_LIGHT2);
@@ -6825,6 +6827,18 @@ void myKeyboard(unsigned char button, int x, int y)
 		if (currentView == THIRD_PERSON)
 			thirdPersonOffset.z -= thirdPersonMovementSpeed;
 		break;
+
+    case 'I':
+    case 'i':
+        /*headLightIntensity += 1.0f;
+        if (headLightIntensity >= 500.0f) {
+            headLightIntensity = 0.0f;
+        }*/
+        headlightColor += 0.2f; 
+        if (headlightColor >= 1.0f) {
+            headlightColor = 0.0f;
+        }
+	break;
     case 'r':
     case 'R':
         glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
