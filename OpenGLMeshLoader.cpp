@@ -24,6 +24,10 @@
 void goToNextLevel(); 
 
 
+int level = 2;
+boolean selectingCar = true;
+int selectedCar = 0;
+
 GLuint shaderProgram;
 
 
@@ -337,7 +341,9 @@ public:
 	}
 
     void update(float deltaTime) {
-        time += deltaTime;
+        if (level == 2 && !selectingCar) {
+            time += deltaTime;
+        }
         if (time > duration) {
             time = duration; // Cap at maximum duration
         }
@@ -427,7 +433,9 @@ public:
     }
 
     void update(float deltaTime) {
-        time += deltaTime;
+        if(level == 2 && !selectingCar) {
+			time += deltaTime;
+		}
         if (time > duration) {
             time = duration; // Cap at maximum duration
         }
@@ -560,14 +568,14 @@ std::vector<Cone> cones = {
 };
 
 std::vector<Stone> stones = {
-    Stone(-0.949136, 1, 62.6161),
-    Stone(-55.3627, 1, 99.5125),
-    Stone(-34.5801, 1, 215.34),
-    Stone(-88.8641, 1, 243.28),
-    Stone(-192.955, 1, 231.441),
-    Stone(-200.625, 1, 381.979),
-    Stone(-247.875, 1, 330.386),
-    Stone(-237.087, 1, 301.843)
+    Stone(-0.949136, 0.5, 62.6161),
+    Stone(-55.3627, 0.5, 99.5125),
+    Stone(-34.5801, 0.5, 215.34),
+    Stone(-88.8641, -0.25, 243.28),
+    Stone(-192.955,  -0.25, 231.441),
+    Stone(-200.625,  -0.25, 381.979),
+    Stone(-247.875,  -0.25, 330.386),
+    Stone(-237.087,  -0.25, 301.843)
 };
 
 std::vector<Log> logs = {
@@ -692,9 +700,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 1; 
-boolean selectingCar = true;
-int selectedCar = 0; 
+
 
 enum CameraView { OUTSIDE, INSIDE_FRONT, THIRD_PERSON, CINEMATIC};
 CameraView currentView = CINEMATIC;
@@ -884,6 +890,7 @@ void stopIdleEngine() {
     errorCode = mciSendStringA("close idleEngine", NULL, 0, NULL);
     checkMciError(errorCode, "Closing idle engine");
 }
+
 void playCoinSound() {
 	PlaySound(TEXT("sounds/coin.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
@@ -899,7 +906,6 @@ void playNitroSound() {
 void playConeCrashSound() {
 	PlaySound(TEXT("sounds/coneCrash.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
 }
-
 
 void playLoseSound() {
 	PlaySound(TEXT("sounds/wasted.wav"), NULL, SND_FILENAME | SND_ASYNC | SND_NODEFAULT);
@@ -1110,19 +1116,20 @@ void renderCarSelectScreen() {
 
         // Draw car name
         glColor3f(1.0f, 1.0f, 1.0f);
-        int nameWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_12, (const unsigned char*)cars[i].name.c_str());
+        int nameWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)cars[i].name.c_str());
         glRasterPos2i(x + (carWidth - nameWidth) / 2, y + carHeight + 20);
         for (char c : cars[i].name) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
         }
 
         // Draw car stats
         std::string stats = cars[i].drivetrain + " | " + std::to_string(cars[i].weight) + "kg | " + std::to_string(cars[i].horsepower) + "hp | " + std::to_string(cars[i].performancePoints) + "PP";
-        int statsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_12, (const unsigned char*)stats.c_str());
+        int statsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)stats.c_str());
         glRasterPos2i(x + (carWidth - statsWidth) / 2, y + carHeight + 40);
         for (char c : stats) {
-            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, c);
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
         }
+
 
         // Draw selection box
         if (i == selectedCarIndex || i == hoverCarIndex) {
@@ -5462,6 +5469,9 @@ void updateCamera()
 
     if (currentView == CINEMATIC && !selectingCar) {
         // Check if we're at the final point
+        sunEffect.reset();
+        sunrise.reset();
+
         if (level == 1) {
             if (currentCinematicPoint == cinematicPoints.size() - 1) {
                 float t = cinematicTimer / FINAL_POINT_DURATION;
@@ -5513,6 +5523,8 @@ void updateCamera()
         }
         else {
             if (currentCinematicPoint == cinematicPoints2.size() - 1) {
+                sunEffect.reset();
+                sunrise.reset();
                 float t = cinematicTimer / FINAL_POINT_DURATION;
                 Vector current = cinematicPoints2[currentCinematicPoint];
 
@@ -6183,8 +6195,8 @@ void renderStones() {
     for (const auto& stone : stones) {
         glPushMatrix();
         glTranslatef(stone.x, stone.y, stone.z);
-        glScalef(1.0f, 1.0f, 1.0f);  // Adjust scale if needed
-        glRotatef(180.0f, 1, 0, 0);   // Adjust rotation if needed
+        glScalef(0.5f, 0.5f, 0.5f);  // Adjust scale if needed
+        //glRotatef(180.0f, 1, 0, 0);   // Adjust rotation if needed
         rockModel.DrawModel();
         glPopMatrix();
     }
@@ -6718,6 +6730,10 @@ void myKeyboard(unsigned char button, int x, int y)
         // wait for assets to be loaded 
         stopMenuMusic();
         myInit();
+
+        sunrise.reset();
+        sunEffect.reset();
+
         if (level == 1)
             playCinematic1Music();
         else
@@ -6803,8 +6819,12 @@ void myKeyboard(unsigned char button, int x, int y)
 	//	break;
     case 13:
     // Enter key
-        if(!selectingCar)
-		endCinematicMode();
+        if (!selectingCar) {
+            endCinematicMode();
+            sunEffect.reset();
+            sunrise.reset();
+        }
+        sunsetProgress = 0.0f;
 		break;
 	case 27:
 		exit(0);
@@ -7085,7 +7105,7 @@ void LoadAssets2() {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
-    if (!rockModel.LoadModel("models/rock/scene.gltf")) {
+    if (!rockModel.LoadModel("models/rock-snow/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
     if (!roadBlockModel.LoadModel("models/roadsign/scene.gltf")) {
@@ -7174,6 +7194,9 @@ void goToNextLevel() {
     level = 2;
     currentCinematicPoint = 0;
     cinematicTimer = 0;
+
+    // make my display 2 the current display
+    glutDisplayFunc(myDisplay2);
     currentView = CINEMATIC;
     secondLevelLoading = false;
 	menuMusicStarted = false;
