@@ -5343,7 +5343,7 @@ void updateCamera()
                 yawLookAt.y * sin(pitchRadians) + yawLookAt.z * cos(pitchRadians)
             );
 
-            if (level == 1) {
+            if (selectedCar == 1) {
                 Eye = Vector(
                     carPosition.x + rotatedCameraOffset.x,
                     carPosition.y + rotatedCameraOffset.y,
@@ -6278,7 +6278,11 @@ void myDisplay(void)
         renderCones();
         renderNitros();
 
+        if(selectedCar == 1)
         renderCar();
+        else if(selectedCar == 2)
+        renderCar2();
+
         // Update car model position and rotation
         glPushMatrix();
         glTranslatef(112.226, 0, 226.23);
@@ -6349,7 +6353,12 @@ void myDisplay2(void) {
          glPopMatrix();*/
 
         setupLighting();
-        renderCar2();
+
+        if (selectedCar == 1)
+            renderCar();
+        else if (selectedCar == 2)
+            renderCar2();
+
         renderCoins();
         renderStreetlights();
         updateCoinAnimation();
@@ -6634,8 +6643,6 @@ void LoadAssets()
 	// Loading Model files
 	model_house.Load("Models/house/house.3DS");
 	model_tree.Load("Models/tree/Tree1.3ds");
-	model_bugatti.Load("Models/bugatti/Bugatti_Bolide_2024_Modified_CSB.3ds");
-
 
     
 	if (!gltfModel1.LoadModel("models/track5/scene.gltf")) {
@@ -6647,6 +6654,14 @@ void LoadAssets()
 		std::cerr << "Failed to load GLTF model" << std::endl;
 		// Handle error
 	}
+    if (!bugattiModel.LoadModel("models/bugatti-no-wheels/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+
+    if (!blueWheelModel.LoadModel("models/blue-wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
 
 	if (!redWheelsFrontLeft1.LoadModel("models/wheel/scene.gltf")) {
 		std::cerr << "Failed to load GLTF model" << std::endl;
@@ -6716,6 +6731,8 @@ void UnloadAssets() {
     finishModel.UnloadModel();
     horizontalTraffic.UnloadModel();
     trafficObstacle.UnloadModel();
+    bugattiModel.UnloadModel();
+    blueWheelModel.UnloadModel();
 }
 
 // Load Level 2
@@ -6763,11 +6780,35 @@ void LoadAssets2() {
  //       // Handle error
  //   }
 
+    if (!carModel1.LoadModel("models/red-car-no-wheels/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
     if (!blueWheelModel.LoadModel("models/blue-wheel/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
         // Handle error
     }
 
+    if (!redWheelsFrontLeft1.LoadModel("models/wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!redWheelsFrontRight1.LoadModel("models/wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!redWheelsBackLeft1.LoadModel("models/wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
+
+    if (!redWheelsBackRight1.LoadModel("models/wheel/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+        // Handle error
+    }
 
 
 
@@ -6858,6 +6899,7 @@ void main(int argc, char** argv)
         LoadAssets();
     }
     else {
+        loadCars();
         LoadAssets2();
 	
     }
