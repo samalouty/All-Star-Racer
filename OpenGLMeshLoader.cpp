@@ -941,7 +941,7 @@ void playLoseSound() {
 }
 
 
-float headLightIntensity = 0.0f;
+float headLightIntensity = 0.9f;
 float headlightColor = 0.0f;
 
 // Function to set up the headlights
@@ -968,6 +968,36 @@ void setupLighting() {
     glLightfv(GL_LIGHT1, GL_SPECULAR, lightColor);
 }
 
+void setupLighting2() {
+    glEnable(GL_LIGHTING);
+    glDisable(GL_LIGHT0);
+    glDisable(GL_LIGHT1);
+    glDisable(GL_LIGHT2);
+
+    // Headlight 1 (Right)
+    glEnable(GL_LIGHT3);
+    GLfloat headlight1_pos[] = { 2.0f, 5.0f, 1.0f, 1.0f }; // Specify position
+    GLfloat headlight_dir[] = { 0.0f, -0.1f, 1.0f }; // Specify direction
+    glLightfv(GL_LIGHT3, GL_POSITION, headlight1_pos);
+    glLightfv(GL_LIGHT3, GL_SPOT_DIRECTION, headlight_dir);
+    glLightf(GL_LIGHT3, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
+    glLightf(GL_LIGHT3, GL_SPOT_EXPONENT, headLightIntensity); // Intensity falloff
+    GLfloat lightColor[] = { headlightColor, headlightColor, headlightColor, 1.0f }; // Warm white
+    glLightfv(GL_LIGHT3, GL_DIFFUSE, lightColor);
+    glLightfv(GL_LIGHT3, GL_SPECULAR, lightColor);
+
+    // Headlight 2 (Left)
+    glEnable(GL_LIGHT4);
+    GLfloat headlight2_pos[] = { -2.0f, 5.0f, 1.0f, 1.0f }; // Specify position
+    glLightfv(GL_LIGHT4, GL_POSITION, headlight2_pos);
+    glLightfv(GL_LIGHT4, GL_SPOT_DIRECTION, headlight_dir);
+    glLightf(GL_LIGHT4, GL_SPOT_CUTOFF, 20.0f);            // Cone angle
+    glLightf(GL_LIGHT4, GL_SPOT_EXPONENT, headLightIntensity); // Intensity falloff
+    glLightfv(GL_LIGHT4, GL_DIFFUSE, lightColor);
+    glLightfv(GL_LIGHT4, GL_SPECULAR, lightColor);
+}
+
+
 
 // Array to hold the coordinates of the streetlights
 std::vector<std::pair<float, float>> streetlightCoords = {
@@ -988,7 +1018,6 @@ float getRandomBrightness() {
 
 
 void renderStreetlights() {
-    glEnable(GL_LIGHTING);
     glEnable(GL_COLOR_MATERIAL);
 
     for (size_t i = 0; i < streetlightCoords.size(); ++i) {
@@ -1000,15 +1029,15 @@ void renderStreetlights() {
 		GLfloat lightDir[] = { 0.0f, -1.0f, 0.0f }; // Direction
 
         // Set attenuation (to limit light spread)
-        glEnable(GL_LIGHT0 + i);
-        glLightfv(GL_LIGHT0 + i, GL_DIFFUSE, lightColor);
-        glLightfv(GL_LIGHT0 + i, GL_POSITION, lightPos);
-        glLightf(GL_LIGHT0 + i, GL_CONSTANT_ATTENUATION, 0.8f);
-        glLightf(GL_LIGHT0 + i, GL_LINEAR_ATTENUATION, 0.2f);
-        glLightf(GL_LIGHT0 + i, GL_QUADRATIC_ATTENUATION, 0.1f);
+        glEnable(GL_LIGHT3 + i);
+        glLightfv(GL_LIGHT3 + i, GL_DIFFUSE, lightColor);
+        glLightfv(GL_LIGHT3 + i, GL_POSITION, lightPos);
+        glLightf(GL_LIGHT3 + i, GL_CONSTANT_ATTENUATION, 0.8f);
+        glLightf(GL_LIGHT3 + i, GL_LINEAR_ATTENUATION, 0.2f);
+        glLightf(GL_LIGHT3 + i, GL_QUADRATIC_ATTENUATION, 0.1f);
 		//glLightf(GL_LIGHT0 + i, GL_SPOT_CUTOFF, 30.0f);            // Cone angle
 		//glLightf(GL_LIGHT0 + i, GL_SPOT_EXPONENT, 10.0f);          // Intensity falloff
-		glLightfv(GL_LIGHT0 + i, GL_SPOT_DIRECTION, lightDir); // Direction
+		glLightfv(GL_LIGHT3 + i, GL_SPOT_DIRECTION, lightDir); // Direction
     }
 }
 
@@ -5301,8 +5330,8 @@ void updateCarPosition2(float deltaTime) {
 
 
     if (isPointInTrack(trackVertices2, carPosition, 9.0f)) {
-        /*std::cout << "Car Pos: ";
-        carPosition.print();*/
+        std::cout << "Car Pos: ";
+        carPosition.print();
         collisionDetected = false;
     }
     else {
@@ -6446,16 +6475,19 @@ void renderCar2() {
     glRotatef(0, 0, 1, 0);
 
     headlight1_pos[0] = 2.0f;
-    headlight1_pos[1] = 0.5f;
+    headlight1_pos[1] = 0.0f;
     headlight1_pos[2] = 1.0f;
 
     headlight2_pos[0] = -2.0f;
-    headlight2_pos[1] = 0.5f;
+    headlight2_pos[1] = 0.0f;
     headlight2_pos[2] = 1.0f;
 
     headlight_dir[0] = 0.0f;
     headlight_dir[1] = -0.1f;
     headlight_dir[2] = 1.0f;
+
+    
+
 
     glLightfv(GL_LIGHT1, GL_POSITION, headlight1_pos);
     glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, headlight_dir);
@@ -6701,6 +6733,8 @@ void myDisplay(void)
 void myDisplay2(void) {
 
     if (!selectingCar) {
+        setupLighting();
+
 
         static int lastTime = 0;
         int currentTime = glutGet(GLUT_ELAPSED_TIME);
@@ -6719,6 +6753,10 @@ void myDisplay2(void) {
         sunEffect.apply();
         updateCamera();
 
+        if (selectedCar == 1)
+            renderCar();
+        else if (selectedCar == 2)
+            renderCar2();
         // draw moscow 
 
         glPushMatrix();
@@ -6742,12 +6780,7 @@ void myDisplay2(void) {
          rock2Model.DrawModel();
          glPopMatrix();*/
 
-        setupLighting();
 
-        if (selectedCar == 1)
-            renderCar();
-        else if (selectedCar == 2)
-            renderCar2();
 
         renderCoins();
         renderStreetlights();
