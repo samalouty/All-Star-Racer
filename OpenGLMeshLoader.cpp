@@ -1007,7 +1007,7 @@ GLuint backgroundTexture;
 
 
 void loadCars() {
-    backgroundTexture = loadTexture("textures/background3.jpg");
+    backgroundTexture = loadTexture("textures/bg6.jpeg");
     cars.push_back({ "Koenigsegg Agera", "SW", 1395, 1160, 1176, loadTexture("textures/koenigsegg2.png") });
     cars.push_back({ "Bugatti Bolide", "DE", 1450, 1578, 1600, loadTexture("textures/bugatti2.png") });
 
@@ -1074,6 +1074,16 @@ void renderCarSelectScreen() {
         glEnd();
         glDisable(GL_TEXTURE_2D);
 
+        // Draw translucent white selection box
+        glColor4f(1.0f, 1.0f, 1.0f, 0.3f);
+        glBegin(GL_QUADS);
+        glVertex2i(x - 5, y - 5);
+        glVertex2i(x + carWidth + 5, y - 5);
+        glVertex2i(x + carWidth + 5, y + carHeight + 5);
+        glVertex2i(x - 5, y + carHeight + 5);
+        glEnd();
+
+        // Draw selection border
         if (i == selectedCar - 1) {  // Highlight the selected car
             glColor3f(0.0f, 1.0f, 0.0f);  // Green for selected
         }
@@ -1107,19 +1117,6 @@ void renderCarSelectScreen() {
             glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, c);
         }
 
-
-        // Draw selection box
-        if (i == selectedCarIndex || i == hoverCarIndex) {
-            glColor3f(1.0f, 1.0f, 0.0f);
-            glLineWidth(2.0f);
-            glBegin(GL_LINE_LOOP);
-            glVertex2i(x - 5, y - 5);
-            glVertex2i(x + carWidth + 5, y - 5);
-            glVertex2i(x + carWidth + 5, y + carHeight + 5);
-            glVertex2i(x - 5, y + carHeight + 5);
-            glEnd();
-        }
-
         x += carWidth + carSpacing;
     }
 
@@ -1136,8 +1133,8 @@ void renderCarSelectScreen() {
 
     glMatrixMode(GL_MODELVIEW);
     glPopMatrix();
-
 }
+
 
 
 
