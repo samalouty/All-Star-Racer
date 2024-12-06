@@ -568,13 +568,16 @@ std::vector<Stone> stones = {
 
 std::vector<Log> logs = {
     Log(-160.909, 0, 386.673),
-    Log(-160.909, 0, 378.713)
+    Log(-160.909, 0, 378.713), 
+    Log(-161.442, 0, 372.175)
 };
 
 std::vector<Vector> barriers2 = {
     Vector(-47.0496, 0, -26.7259),
     Vector(-160.909, 0, 386.673),
-    Vector(-160.909, 0, 378.713)
+    Vector(-160.909, 0, 378.713),
+    Vector(-161.442, 0, 372.175)
+
 };
 
 std::vector<Nitro> nitros = {
@@ -685,7 +688,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 1; 
+int level = 2; 
 boolean selectingCar = true;
 int selectedCar = 0; 
 
@@ -4891,7 +4894,7 @@ void activateNitro() {
     }
 }
 
-bool checkCollisionWithNitros(Vector& carPosition, std::vector<Nitro>& nitros, float collisionThreshold = 2.0f) {
+bool checkCollisionWithNitros(Vector& carPosition, std::vector<Nitro>& nitros, float collisionThreshold = 3.0f) {
     for (auto it = nitros.begin(); it != nitros.end(); ++it) {
         Vector nitroPosition(it->x, it->y, it->z);
         if (carPosition.distanceToNoY(nitroPosition) <= collisionThreshold) {
@@ -5145,6 +5148,11 @@ void updateCarPosition2(float deltaTime) {
 
         // Ensure the car stops moving forward
         carSpeed = std::min(carSpeed, 0.0f);
+
+        Vector startBarrier = Vector(-47.0496, 0, -26.7259);
+        if(!(startBarrier.distanceToNoY(carPosition) <= 4.0f)){
+            applyCollisionRecoil(deltaTime);
+        }
         if(score != 0)
         score = score - 1;
     }
@@ -6026,7 +6034,7 @@ void renderLogs() {
         glTranslatef(log.x, log.y, log.z);
         glScalef(3.0f, 3.0f, 3.0f);  // Adjust scale if needed
         glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
-        //logModel.DrawModel();
+        logModel.DrawModel();
         glPopMatrix();
     }
 }
