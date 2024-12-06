@@ -785,6 +785,8 @@ float nitroTimer = 0.0f;
 float nitroDuration = 3.0f; // 3 seconds of nitro boost
 float nitroSpeedMultiplier = 20;
 float lastSpeed = 0.0f;
+bool carTooDamaged = false;
+bool wasGoingForward = false;
 
 int score = 0;
 SunriseEffect sunrise(120.0f);
@@ -4925,18 +4927,29 @@ void startRespawn() {
 void updateCollisionRecoil(float deltaTime) {
     float radians = carRotation * M_PI / 180.0f;
     while (!(collisionRecoil <= 0)) {
-        carPosition.x -= sin(radians) * 4.0f * deltaTime;
-        carPosition.z -= cos(radians) * 4.0f * deltaTime;
-        collisionRecoil -= deltaTime / 2;
+        if (wasGoingForward) {
+            carPosition.x -= sin(radians) * 4.0f * deltaTime;
+            carPosition.z -= cos(radians) * 4.0f * deltaTime;
+            collisionRecoil -= deltaTime / 2;
+        }
+        else {
+            carPosition.x += sin(radians) * 4.0f * deltaTime;
+            carPosition.z += cos(radians) * 4.0f * deltaTime;
+            collisionRecoil -= deltaTime / 4;
+        }
     }
     if (collisionRecoil <= 0) {
         collisionRecoil = 0.0f;
          isColliding = false;
+		 wasGoingForward = false;
     }
     isColliding = false;
 }
 
 void applyCollisionRecoil(float deltaTime) {
+    if (wasGoingForward) {
+		printf("Going forward\n");
+    }
     isColliding = true;
     carSpeed = 0.0f;
     collisionRecoil = recoilDuration;
@@ -5108,8 +5121,8 @@ void updateCarPosition2(float deltaTime) {
     if (!collisionDetected) { // Allow movement only if no collision or moving backward
         carPosition.x += sin(radians) * carSpeed * deltaTime;
         carPosition.z += cos(radians) * carSpeed * deltaTime;
-        std::cout << "Car Pos: ";
-        carPosition.print();
+        /*std::cout << "Car Pos: ";
+        carPosition.print();*/
     }
     else {
         if (carSpeed < 0) {
@@ -5138,6 +5151,10 @@ void updateCarPosition2(float deltaTime) {
         carSpeed = std::min(carSpeed, 0.0f); // Prevent forward movement by setting carSpeed to zero
     }
     if (checkCollisionWithBarriers2(carPosition)) {
+        if (carSpeed >= 0)
+            wasGoingForward = true;
+        else
+            wasGoingForward = false;
         collisionDetected = true; // Set collision flag to true
 
         std::cout << "Collision" << std::endl;
@@ -5171,6 +5188,10 @@ void updateCarPosition2(float deltaTime) {
         /*printf("fffffffffffffffff");*/
         gameWon = true;
         playerTime = 90.0f - gameTimer; // Calculate player's time
+    }
+    if (score + coins.size() < 27) {
+        gameOver = true;
+        carTooDamaged = true;
     }
 }
 
@@ -5528,12 +5549,20 @@ void drawGameOverText() {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
     }
 
-    glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30);
+    if (carTooDamaged) {
+        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30);
+        const char* restartText = "Car Too Damaged to continue";
+        for (const char* c = restartText; *c != '\0'; c++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+        }
+    }
+
+    glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 60);
     const char* restartText = "Press 'R' to restart";
     for (const char* c = restartText; *c != '\0'; c++) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *c);
     }
-
+    
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
@@ -5958,6 +5987,7 @@ void resetGame() {
 	coins = originalCoins;
     timerStarted = false;
     score = 0; 
+	carTooDamaged = false;
     sunEffect.reset();
     sunrise.reset();
 }
@@ -6348,6 +6378,10 @@ void myDisplay(void)
         handleCarControls(deltaTime);
         updateCarPosition(deltaTime);
         if (checkCollisionWithObstacles(carPosition)) {
+            if (carSpeed > 0)
+                wasGoingForward = true;
+            else
+                wasGoingForward = false;
             carSpeed = 0;
             isColliding = true;
             applyCollisionRecoil(deltaTime);
@@ -6499,6 +6533,10 @@ void myDisplay2(void) {
         updateCoinAnimation();
 
         if (checkCollisionWithObstacles2(carPosition)) {
+            if (carSpeed > 0)
+                wasGoingForward = true;
+            else
+                wasGoingForward = false;
             carSpeed = 0;
             isColliding = true;
             applyCollisionRecoil(deltaTime);
