@@ -24,7 +24,7 @@
 void goToNextLevel(); 
 
 
-int level = 2;
+int level = 1;
 boolean selectingCar = true;
 int selectedCar = 0;
 
@@ -6389,12 +6389,37 @@ void renderCar() {
 }
 
 void renderCar2() {
+    // disable all lights before rendering 
+    
+    //glDisable(GL_LIGHT0);
+    //glDisable(GL_LIGHT1);
+    //glDisable(GL_LIGHT2);
+
+
     // Update car model position and rotation
     glPushMatrix();
     glTranslatef(carPosition.x, carPosition.y, carPosition.z);
     glRotatef(carRotation, 0, 1, 0);
     //glScalef(1, 1, 1);
     glRotatef(0, 0, 1, 0);
+
+    headlight1_pos[0] = 2.0f;
+    headlight1_pos[1] = 0.5f;
+    headlight1_pos[2] = 1.0f;
+
+    headlight2_pos[0] = -2.0f;
+    headlight2_pos[1] = 0.5f;
+    headlight2_pos[2] = 1.0f;
+
+    headlight_dir[0] = 0.0f;
+    headlight_dir[1] = -0.1f;
+    headlight_dir[2] = 1.0f;
+
+    glLightfv(GL_LIGHT1, GL_POSITION, headlight1_pos);
+    glLightfv(GL_LIGHT1, GL_SPOT_DIRECTION, headlight_dir);
+    glLightfv(GL_LIGHT2, GL_POSITION, headlight2_pos);
+    glLightfv(GL_LIGHT2, GL_SPOT_DIRECTION, headlight_dir);
+
     bugattiModel.DrawModel();
     glPopMatrix();
 
@@ -6404,6 +6429,10 @@ void renderCar2() {
     float wheelOffsetZFront = -2.0f; // Forward offset for front wheels
     float wheelOffsetZBack = 1.8f; // Backward offset for back wheels
     float scaleBlueWheel = 0.14f;
+
+    glDisable(GL_LIGHT0);
+    glDisable(GL_LIGHT1);
+    glDisable(GL_LIGHT2);
 
     // Draw back left wheel
     glPushMatrix();
@@ -6417,6 +6446,8 @@ void renderCar2() {
     glScalef(scaleBlueWheel, scaleBlueWheel, scaleBlueWheel);
     blueWheelModel.DrawModel();
     glPopMatrix();
+
+
 
     // Draw back right wheel
     glPushMatrix();
@@ -6463,6 +6494,12 @@ void renderCar2() {
     glScalef(scaleBlueWheel, scaleBlueWheel, scaleBlueWheel);
     blueWheelModel.DrawModel();
     glPopMatrix();
+
+    // enable all lights after rendering
+
+    glEnable(GL_LIGHT0);
+    glEnable(GL_LIGHT1);
+    glEnable(GL_LIGHT2);
 }
 
 void renderGoRight() {
