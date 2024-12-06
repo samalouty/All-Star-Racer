@@ -685,7 +685,7 @@ Model_3DS model_bugatti;
 // Textures
 GLTexture tex_ground;
 
-int level = 2; 
+int level = 1; 
 boolean selectingCar = true;
 int selectedCar = 0; 
 
@@ -765,7 +765,7 @@ GLfloat headlight_dir[] = { 0.0f, 0.0f, -1.0f };        // Direction of headligh
 bool gameOver = false;
 Vector lastCarPosition(0, 0, 0);
 bool gameWon = false;
-float gameTimer = 890.0f; // 90 seconds timer
+float gameTimer = 90.0f; // 90 seconds timer
 float playerTime = 0.0f;
 bool timerStarted = false;
 
