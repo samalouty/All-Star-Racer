@@ -571,6 +571,12 @@ std::vector<Log> logs = {
     Log(-160.909, 0, 378.713)
 };
 
+std::vector<Vector> barriers2 = {
+    Vector(-27.0392, 0, -23.2698),
+    Vector(-160.909, 0, 386.673),
+    Vector(-160.909, 0, 378.713)
+};
+
 std::vector<Nitro> nitros = {
     //Nitro(1,1,1),
     Nitro(32.1886, 1.5, 113.886, 0.0),
@@ -4864,9 +4870,12 @@ bool checkCollisionWithObstacles2(const Vector& carPosition, float collisionThre
             return true; // Collision detected
         }
     }
-    for (const auto& log : logs) {
-        Vector logPosition(log.x, log.y, log.z);
-        if (carPosition.distanceToNoY(logPosition) <= 800) {
+    return false; // No collision
+}
+
+bool checkCollisionWithBarriers2(const Vector& carPosition, float collisionThreshold = 2.0f) {
+    for (const auto& barrier : barriers2) {
+        if (carPosition.distanceToNoY(barrier) <= 4) {
             return true;
         }
     }
