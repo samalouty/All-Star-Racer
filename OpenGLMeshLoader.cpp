@@ -24,7 +24,7 @@
 void goToNextLevel(); 
 
 
-int level = 1;
+int level = 2;
 boolean selectingCar = true;
 int selectedCar = 0;
 
@@ -568,14 +568,14 @@ std::vector<Cone> cones = {
 };
 
 std::vector<Stone> stones = {
-    Stone(-0.949136, 1, 62.6161),
-    Stone(-55.3627, 1, 99.5125),
-    Stone(-34.5801, 1, 215.34),
-    Stone(-88.8641, 1, 243.28),
-    Stone(-192.955, 1, 231.441),
-    Stone(-200.625, 1, 381.979),
-    Stone(-247.875, 1, 330.386),
-    Stone(-237.087, 1, 301.843)
+    Stone(-0.949136, 0.5, 62.6161),
+    Stone(-55.3627, 0.5, 99.5125),
+    Stone(-34.5801, 0.5, 215.34),
+    Stone(-88.8641, -0.25, 243.28),
+    Stone(-192.955,  -0.25, 231.441),
+    Stone(-200.625,  -0.25, 381.979),
+    Stone(-247.875,  -0.25, 330.386),
+    Stone(-237.087,  -0.25, 301.843)
 };
 
 std::vector<Log> logs = {
@@ -6169,8 +6169,8 @@ void renderStones() {
     for (const auto& stone : stones) {
         glPushMatrix();
         glTranslatef(stone.x, stone.y, stone.z);
-        glScalef(1.0f, 1.0f, 1.0f);  // Adjust scale if needed
-        glRotatef(180.0f, 1, 0, 0);   // Adjust rotation if needed
+        glScalef(0.5f, 0.5f, 0.5f);  // Adjust scale if needed
+        //glRotatef(180.0f, 1, 0, 0);   // Adjust rotation if needed
         rockModel.DrawModel();
         glPopMatrix();
     }
@@ -7068,7 +7068,7 @@ void LoadAssets2() {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
-    if (!rockModel.LoadModel("models/rock/scene.gltf")) {
+    if (!rockModel.LoadModel("models/rock-snow/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
     if (!roadBlockModel.LoadModel("models/roadsign/scene.gltf")) {
