@@ -280,8 +280,9 @@ GLTFModel moscowModel;
 GLTFModel bugattiModel;
 GLTFModel blueWheelModel;
 GLTFModel egpModel;
-GLTFModel rock1Model;
-GLTFModel rock2Model;
+GLTFModel rockModel;
+GLTFModel logModel;
+GLTFModel roadBlockModel;
 
 
 
@@ -496,6 +497,22 @@ struct Cone {
     Cone(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
 };
 
+struct Stone {
+    float x;
+    float y;
+    float z;
+
+    Stone(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+};
+
+struct Log {
+    float x;
+    float y;
+    float z;
+
+    Log(float _x, float _y, float _z) : x(_x), y(_y), z(_z) {}
+};
+
 struct Nitro {
     float x;
     float y;
@@ -540,6 +557,31 @@ std::vector<Cone> cones = {
     Cone(-152.706f, 1.3f, -55.6917f),
     Cone(-264.162f, 1.3f, 45.1598f),
     //Cone(-396.0f, 1.3f, 45.1598f) // Assuming the last value was cut off, added a placeholder value
+};
+
+std::vector<Stone> stones = {
+    Stone(-0.949136, 1, 62.6161),
+    Stone(-55.3627, 1, 99.5125),
+    Stone(-34.5801, 1, 215.34),
+    Stone(-88.8641, 1, 243.28),
+    Stone(-192.955, 1, 231.441),
+    Stone(-200.625, 1, 381.979),
+    Stone(-247.875, 1, 330.386),
+    Stone(-237.087, 1, 301.843)
+};
+
+std::vector<Log> logs = {
+    Log(-160.909, 0, 386.673),
+    Log(-160.909, 0, 378.713), 
+    Log(-161.442, 0, 372.175)
+};
+
+std::vector<Vector> barriers2 = {
+    Vector(-47.0496, 0, -26.7259),
+    Vector(-160.909, 0, 386.673),
+    Vector(-160.909, 0, 378.713),
+    Vector(-161.442, 0, 372.175)
+
 };
 
 std::vector<Nitro> nitros = {
@@ -747,6 +789,8 @@ float nitroTimer = 0.0f;
 float nitroDuration = 3.0f; // 3 seconds of nitro boost
 float nitroSpeedMultiplier = 20;
 float lastSpeed = 0.0f;
+bool carTooDamaged = false;
+bool wasGoingForward = false;
 
 int score = 0;
 SunriseEffect sunrise(120.0f);
@@ -1079,7 +1123,7 @@ void renderCarSelectScreen() {
     }
 
     glColor3f(1.0f, 1.0f, 1.0f);
-    std::string instructions = "Click on a car to select it. Press Enter to start the game.";
+    std::string instructions = "Click on a car to select it. Press 'S' to start the game.";
     int instructionsWidth = glutBitmapLength(GLUT_BITMAP_HELVETICA_18, (const unsigned char*)instructions.c_str());
     glRasterPos2i((WIDTH - instructionsWidth) / 2, HEIGHT - 50);
     for (char c : instructions) {
@@ -4927,6 +4971,25 @@ bool checkCollisionWithObstacles(const Vector& carPosition, float collisionThres
     return false; // No collision
 }
 
+bool checkCollisionWithObstacles2(const Vector& carPosition, float collisionThreshold = 2.0f) {
+    for (const auto& stone : stones) {
+        Vector stonePosition(stone.x, stone.y, stone.z);
+        if (carPosition.distanceToNoY(stonePosition) <= collisionThreshold) {
+            return true; // Collision detected
+        }
+    }
+    return false; // No collision
+}
+
+bool checkCollisionWithBarriers2(const Vector& carPosition, float collisionThreshold = 2.0f) {
+    for (const auto& barrier : barriers2) {
+        if (carPosition.distanceToNoY(barrier) <= 4) {
+            return true;
+        }
+    }
+    return false; // No collision
+}
+
 void activateNitro() {
     if (!isNitroActive) {
         isNitroActive = true;
@@ -4936,7 +4999,7 @@ void activateNitro() {
     }
 }
 
-bool checkCollisionWithNitros(Vector& carPosition, std::vector<Nitro>& nitros, float collisionThreshold = 2.0f) {
+bool checkCollisionWithNitros(Vector& carPosition, std::vector<Nitro>& nitros, float collisionThreshold = 3.0f) {
     for (auto it = nitros.begin(); it != nitros.end(); ++it) {
         Vector nitroPosition(it->x, it->y, it->z);
         if (carPosition.distanceToNoY(nitroPosition) <= collisionThreshold) {
@@ -4968,18 +5031,29 @@ void startRespawn() {
 void updateCollisionRecoil(float deltaTime) {
     float radians = carRotation * M_PI / 180.0f;
     while (!(collisionRecoil <= 0)) {
-        carPosition.x -= sin(radians) * 4.0f * deltaTime;
-        carPosition.z -= cos(radians) * 4.0f * deltaTime;
-        collisionRecoil -= deltaTime / 2;
+        if (wasGoingForward) {
+            carPosition.x -= sin(radians) * 4.0f * deltaTime;
+            carPosition.z -= cos(radians) * 4.0f * deltaTime;
+            collisionRecoil -= deltaTime / 2;
+        }
+        else {
+            carPosition.x += sin(radians) * 4.0f * deltaTime;
+            carPosition.z += cos(radians) * 4.0f * deltaTime;
+            collisionRecoil -= deltaTime / 4;
+        }
     }
     if (collisionRecoil <= 0) {
         collisionRecoil = 0.0f;
          isColliding = false;
-         startRespawn();
+		 wasGoingForward = false;
     }
+    isColliding = false;
 }
 
 void applyCollisionRecoil(float deltaTime) {
+    if (wasGoingForward) {
+		printf("Going forward\n");
+    }
     isColliding = true;
     carSpeed = 0.0f;
     collisionRecoil = recoilDuration;
@@ -5153,8 +5227,8 @@ void updateCarPosition2(float deltaTime) {
     if (!collisionDetected) { // Allow movement only if no collision or moving backward
         carPosition.x += sin(radians) * carSpeed * deltaTime;
         carPosition.z += cos(radians) * carSpeed * deltaTime;
-        std::cout << "Car Pos: ";
-        carPosition.print();
+        /*std::cout << "Car Pos: ";
+        carPosition.print();*/
     }
     else {
         if (carSpeed < 0) {
@@ -5182,6 +5256,29 @@ void updateCarPosition2(float deltaTime) {
         // Ensure the car stops moving forward
         carSpeed = std::min(carSpeed, 0.0f); // Prevent forward movement by setting carSpeed to zero
     }
+    if (checkCollisionWithBarriers2(carPosition)) {
+        if (carSpeed >= 0)
+            wasGoingForward = true;
+        else
+            wasGoingForward = false;
+        collisionDetected = true; // Set collision flag to true
+
+        std::cout << "Collision" << std::endl;
+
+        // Push the car back slightly
+        carPosition.x -= sin(radians) * carSpeed * deltaTime;
+        carPosition.z -= cos(radians) * carSpeed * deltaTime;
+
+        // Ensure the car stops moving forward
+        carSpeed = std::min(carSpeed, 0.0f);
+
+        Vector startBarrier = Vector(-47.0496, 0, -26.7259);
+        if(!(startBarrier.distanceToNoY(carPosition) <= 4.0f)){
+            applyCollisionRecoil(deltaTime);
+        }
+        if(score != 0)
+        score = score - 1;
+    }
 
     wheelRotationX += carSpeed * 360.0f * deltaTime;
 
@@ -5197,6 +5294,10 @@ void updateCarPosition2(float deltaTime) {
         /*printf("fffffffffffffffff");*/
         gameWon = true;
         playerTime = 90.0f - gameTimer; // Calculate player's time
+    }
+    if (score + coins.size() < 27) {
+        gameOver = true;
+        carTooDamaged = true;
     }
 }
 
@@ -5236,7 +5337,7 @@ void updateCoinAnimation() {
 }
 
 void updateSunPosition(float deltaTime) {
-    if (sunsetProgress < 1.0f) {
+    if (sunsetProgress < 1.0f && !selectingCar) {
         sunsetProgress += deltaTime / sunsetDuration;
         if (sunsetProgress > 1.0f) {
             sunsetProgress = 1.0f; // Clamp to 1.0 to stop the sunset
@@ -5334,7 +5435,7 @@ const float CINEMATIC_DURATION = 7.0f;
 void updateCamera()
 {
 
-    if (currentView == CINEMATIC) {
+    if (currentView == CINEMATIC & !selectingCar) {
         // Check if we're at the final point
         if (level == 1) {
             if (currentCinematicPoint == cinematicPoints.size() - 1) {
@@ -5554,12 +5655,20 @@ void drawGameOverText() {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
     }
 
-    glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30);
+    if (carTooDamaged) {
+        glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 30);
+        const char* restartText = "Car Too Damaged to continue";
+        for (const char* c = restartText; *c != '\0'; c++) {
+            glutBitmapCharacter(GLUT_BITMAP_HELVETICA_18, *c);
+        }
+    }
+
+    glRasterPos2i(WIDTH / 2 - 100, HEIGHT / 2 - 60);
     const char* restartText = "Press 'R' to restart";
     for (const char* c = restartText; *c != '\0'; c++) {
         glutBitmapCharacter(GLUT_BITMAP_HELVETICA_12, *c);
     }
-
+    
     glMatrixMode(GL_PROJECTION);
     glPopMatrix();
     glMatrixMode(GL_MODELVIEW);
@@ -5984,6 +6093,7 @@ void resetGame() {
 	coins = originalCoins;
     timerStarted = false;
     score = 0; 
+	carTooDamaged = false;
     sunEffect.reset();
     sunrise.reset();
 }
@@ -6039,6 +6149,28 @@ void renderCones() {
         glScalef(1.0f, 1.0f, 1.0f);  // Adjust scale if needed
         glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
         coneModel.DrawModel();
+        glPopMatrix();
+    }
+}
+
+void renderStones() {
+    for (const auto& stone : stones) {
+        glPushMatrix();
+        glTranslatef(stone.x, stone.y, stone.z);
+        glScalef(1.0f, 1.0f, 1.0f);  // Adjust scale if needed
+        glRotatef(180.0f, 1, 0, 0);   // Adjust rotation if needed
+        rockModel.DrawModel();
+        glPopMatrix();
+    }
+}
+
+void renderLogs() {
+    for (const auto& log : logs) {
+        glPushMatrix();
+        glTranslatef(log.x, log.y, log.z);
+        glScalef(3.0f, 3.0f, 3.0f);  // Adjust scale if needed
+        glRotatef(90.0f, 0, 1, 0);   // Adjust rotation if needed
+        logModel.DrawModel();
         glPopMatrix();
     }
 }
@@ -6352,6 +6484,10 @@ void myDisplay(void)
         handleCarControls(deltaTime);
         updateCarPosition(deltaTime);
         if (checkCollisionWithObstacles(carPosition)) {
+            if (carSpeed > 0)
+                wasGoingForward = true;
+            else
+                wasGoingForward = false;
             carSpeed = 0;
             isColliding = true;
             applyCollisionRecoil(deltaTime);
@@ -6475,12 +6611,12 @@ void myDisplay2(void) {
         moscowModel.DrawModel();
         glPopMatrix();
 
-        /* glPushMatrix();
-         glTranslatef(1, 1, 2);
-         glRotatef(150, 1, 0, 0);
-         glScalef(1, 1, 1);
-         rock1Model.DrawModel();
-         glPopMatrix();*/
+         glPushMatrix();
+         glTranslatef(-47.0496, 0, -26.7259);
+         glRotatef(90, 0, 1, 0);
+         glScalef(7, 7, 7);
+         roadBlockModel.DrawModel();
+         glPopMatrix();
 
          /*glPushMatrix();
          glTranslatef(5, 1, 1);
@@ -6498,7 +6634,21 @@ void myDisplay2(void) {
 
         renderCoins();
         renderStreetlights();
+        renderLogs();
+        renderStones();
         updateCoinAnimation();
+
+        if (checkCollisionWithObstacles2(carPosition)) {
+            if (carSpeed > 0)
+                wasGoingForward = true;
+            else
+                wasGoingForward = false;
+            carSpeed = 0;
+            isColliding = true;
+            applyCollisionRecoil(deltaTime);
+            if (score != 0)
+                score -= 1;
+        }
 
         if (checkCollisionWithCoins(carPosition, coins))
         {
@@ -6526,12 +6676,14 @@ boolean secondLevelLoading;
 
 void myKeyboard(unsigned char button, int x, int y)
 {
-    if (selectingCar && button == 13 && selectedCar != 0) {  // 13 is the ASCII code for Enter
+    if (selectingCar && button == 's' && selectedCar != 0) {  // 13 is the ASCII code for Enter
         selectingCar = false;
         std::cout << "Selected car: " << selectedCar << std::endl;
         // Initialize game with selected car
         // You might want to call a function here to set up the game based on the selected car
-        glutPostRedisplay();
+        //glutPostRedisplay();
+        // wait for assets to be loaded 
+        myInit();
     }
 
     if (isRespawning || collisionRecoil > 0) {
@@ -6613,6 +6765,7 @@ void myKeyboard(unsigned char button, int x, int y)
 	//	break;
     case 13:
     // Enter key
+        if(!selectingCar)
 		endCinematicMode();
 		break;
 	case 27:
@@ -6889,11 +7042,15 @@ void LoadAssets2() {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
-    if (!rock1Model.LoadModel("models/snowrock/scene.gltf")) {
+
+    if (!logModel.LoadModel("models/log2/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
-    if (!rock2Model.LoadModel("models/snowrock2/scene.gltf")) {
+    if (!rockModel.LoadModel("models/rock/scene.gltf")) {
+        std::cerr << "Failed to load GLTF model" << std::endl;
+    }
+    if (!roadBlockModel.LoadModel("models/roadsign/scene.gltf")) {
         std::cerr << "Failed to load GLTF model" << std::endl;
     }
 
@@ -6956,6 +7113,7 @@ void LoadAssets2() {
 void goToNextLevel() {
     UnloadAssets();
     LoadAssets2();
+    selectedCar = 0; 
     selectingCar = true;
     timerStarted = false;
     gameTimer = 90.0f;
@@ -6976,10 +7134,14 @@ void goToNextLevel() {
     sunEffect.reset();
     sunrise.reset();
     level = 2;
+    currentCinematicPoint = 0;
+    cinematicTimer = 0;
     currentView = CINEMATIC;
     secondLevelLoading = false;
     // make my display 2 the current display
     glutDisplayFunc(myDisplay2);
+    sunEffect.start();
+    sunrise.start();
     glutPostRedisplay();
 
 }

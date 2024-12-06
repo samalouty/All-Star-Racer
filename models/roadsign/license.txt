@@ -1,0 +1,11 @@
+Model Information:
+* title:	Roadsign & Cones Pack
+* source:	https://sketchfab.com/3d-models/roadsign-cones-pack-6cce13f3eb3946a9bbae864c3343326d
+* author:	kris vidotto (https://sketchfab.com/kvidotto)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Roadsign & Cones Pack" (https://sketchfab.com/3d-models/roadsign-cones-pack-6cce13f3eb3946a9bbae864c3343326d) by kris vidotto (https://sketchfab.com/kvidotto) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
